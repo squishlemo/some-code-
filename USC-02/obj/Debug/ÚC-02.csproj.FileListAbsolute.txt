@@ -1,0 +1,8 @@
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\obj\Debug\ÚC-02.csproj.AssemblyReference.cache
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\obj\Debug\ÚC-02.csproj.CoreCompileInputs.cache
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\bin\Debug\ÚC-02.exe.config
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\bin\Debug\ÚC-02.exe
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\bin\Debug\ÚC-02.pdb
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\obj\Debug\ÚC-02.exe
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\obj\Debug\ÚC-02.pdb
+C:\Users\ADMIN\Desktop\C big bois\Lập trình .NET\ÚC-02\obj\Debug\ÚC-02.exe.config
