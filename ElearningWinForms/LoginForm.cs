@@ -2,7 +2,8 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
-using ElearningWinForms.Data;
+using ElearningWinForms.Data;   // <- dùng DbHelper trong namespace này
+
 
 namespace ElearningWinForms
 {
@@ -15,14 +16,15 @@ namespace ElearningWinForms
 
         private void LoginForm_Load(object sender, EventArgs e)
         {
-            // Có thể để trống
+            // có thể để trống
         }
 
-        // ================== ĐĂNG NHẬP ==================
+        // ======= ĐĂNG NHẬP DÙNG DBHELPER =======
+
         private void btnLogin_Click(object sender, EventArgs e)
         {
             string username = txtUsername.Text.Trim();
-            string password = txtPassword.Text;
+            string password = txtPassword.Text;     // script .sql đang dùng '123456' dạng plain-text
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
@@ -35,6 +37,7 @@ namespace ElearningWinForms
 
             try
             {
+                // 1) Lấy user từ bảng Users bằng DbHelper
                 string sql = @"
                     SELECT TOP 1 UserId, FullName, Role, IsActive
                     FROM Users
@@ -57,6 +60,7 @@ namespace ElearningWinForms
 
                 DataRow row = table.Rows[0];
 
+                // 2) Kiểm tra tài khoản còn hoạt động không
                 if (!(bool)row["IsActive"])
                 {
                     MessageBox.Show("Tài khoản đã bị khóa. Liên hệ Admin.",
@@ -68,10 +72,12 @@ namespace ElearningWinForms
 
                 int userId = Convert.ToInt32(row["UserId"]);
                 string fullName = row["FullName"].ToString();
-                string role = row["Role"].ToString();   // "SV" / "GV" / "Admin"
+                string role = row["Role"].ToString();     // "SV", "GV", "Admin"
 
+                // 3) Lấy mã SV / GV / Admin bằng DbHelper.ExecuteScalar
                 string code = GetUserCode(userId, role);
 
+                // 4) Mở main shell (HomeForm) – DÙNG DbHelper gián tiếp qua dữ liệu vừa lấy
                 var home = new HomeForm(userId, role, fullName, code);
                 home.Show();
                 this.Hide();
@@ -85,7 +91,7 @@ namespace ElearningWinForms
             }
         }
 
-        // ================== LẤY MÃ SV / GV / ADMIN ==================
+        // Lấy mã sinh viên/giảng viên/admin tương ứng với UserId & Role
         private string GetUserCode(int userId, string role)
         {
             string sql;
@@ -97,7 +103,7 @@ namespace ElearningWinForms
             else if (role == "Admin")
                 sql = "SELECT TOP 1 AdminId FROM Admins WHERE UserId = @uid";
             else
-                return role + userId;   // role lạ thì trả tạm
+                return role + userId;
 
             object result = DbHelper.ExecuteScalar(
                 sql,
@@ -109,20 +115,16 @@ namespace ElearningWinForms
 
             int id = Convert.ToInt32(result);
 
-            string prefix;
-            if (role == "SV")
-                prefix = "SV";
-            else if (role == "GV")
-                prefix = "GV";
-            else if (role == "Admin")
-                prefix = "AD";
-            else
-                prefix = role;
-
-            return string.Format("{0}{1:0000}", prefix, id);
+            return role switch
+            {
+                "SV" => $"SV{id:0000}",
+                "GV" => $"GV{id:0000}",
+                "Admin" => $"AD{id:0000}",
+                _ => role + id
+            };
         }
 
-        // ================== LINK ĐĂNG KÝ ==================
+        // Link "Đăng ký"
         private void linkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             using (var f = new RegisterForm())
