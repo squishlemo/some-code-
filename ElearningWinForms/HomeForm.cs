@@ -95,7 +95,7 @@ namespace ElearningWinForms
         private void btnGrades_Click(object sender, EventArgs e)
         {
             // UC-05: Điểm & phản hồi
-            OpenChildForm(new GradeManagementForm());
+            OpenChildForm(new GradeManagementForm(CurrentUserId, CurrentRole));
         }
 
         private void btnNotifications_Click(object sender, EventArgs e)

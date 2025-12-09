@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>5</WarningLevel>
-    <IntermediateOutputPath>C:\Users\tuanc\AppData\Local\Temp\vs7D97.tmp\Debug\</IntermediateOutputPath>
+    <IntermediateOutputPath>C:\Users\ADMIN\AppData\Local\Temp\vs9B98.tmp\Debug\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,7 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <IntermediateOutputPath>C:\Users\tuanc\AppData\Local\Temp\vs7D97.tmp\Release\</IntermediateOutputPath>
+    <IntermediateOutputPath>C:\Users\ADMIN\AppData\Local\Temp\vs9B98.tmp\Release\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>ElearningWinForms.Program</StartupObject>

@@ -170,12 +170,12 @@ BEGIN
         SubmissionId INT NOT NULL,
         Score        DECIMAL(5,2) NOT NULL,
         Comment      NVARCHAR(MAX),
-        GradedBy     INT NULL,   -- TeacherId
+        GradedBy     INT NULL,   -- UserId
         GradedTime   DATETIME NOT NULL DEFAULT GETDATE(),
         CONSTRAINT FK_Grades_Submissions 
             FOREIGN KEY (SubmissionId) REFERENCES Submissions(SubmissionId),
         CONSTRAINT FK_Grades_Teachers 
-            FOREIGN KEY (GradedBy) REFERENCES Teachers(TeacherId)
+            FOREIGN KEY (GradedBy) REFERENCES Users(UserId)
     );
 END
 GO
@@ -520,7 +520,468 @@ VALUES
  3, N'Active',
  (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa'));
 
+ --------------------------------------------------------
+-- DỮ LIỆU MẪU CHO UC-04 – NỘP BÀI & CHẤM ĐIỂM
+--------------------------------------------------------
+USE ElearningDB;
+GO
 
+DECLARE @uid_sv01   INT  = (SELECT UserId   FROM Users   WHERE Username = N'sv01');
+DECLARE @uid_gv01   INT  = (SELECT UserId   FROM Users   WHERE Username = N'gv01');
+DECLARE @student_sv INT  = (SELECT StudentId FROM Students WHERE UserId = @uid_sv01);
+DECLARE @teacher_gv INT  = (SELECT TeacherId FROM Teachers WHERE UserId = @uid_gv01);
+
+-- Chọn 1 môn để demo UC-04, ví dụ IT202 - Mạng máy tính
+DECLARE @course_IT202 INT = (SELECT CourseId FROM Courses WHERE CourseCode = N'IT202');
+
+--------------------------------------------------------
+-- 1) TẠO 1 LỚP HỌC PHẦN IT202 DO gv01 PHỤ TRÁCH
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM CourseSections
+    WHERE CourseId = @course_IT202
+      AND Semester = N'2025-2026 HK1'
+      AND [Year]   = 2025
+)
+BEGIN
+    INSERT INTO CourseSections
+        (CourseId,  Semester,          [Year], Room,   MaxEnrollment, CurrentEnrollment, Status,  TeacherId)
+    VALUES
+        (@course_IT202, N'2025-2026 HK1', 2025,  N'A101', 60,            0,                N'Open', @teacher_gv);
+END;
+
+DECLARE @sec_IT202 INT = (
+    SELECT TOP 1 SectionId
+    FROM CourseSections
+    WHERE CourseId = @course_IT202
+      AND Semester = N'2025-2026 HK1'
+      AND [Year]   = 2025
+    ORDER BY SectionId
+);
+
+--------------------------------------------------------
+-- 2) ĐĂNG KÝ sv01 VÀO LỚP HỌC PHẦN NÀY
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Enrollments
+    WHERE StudentId = @student_sv
+      AND SectionId = @sec_IT202
+)
+BEGIN
+    INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+    VALUES (@student_sv, @sec_IT202, GETDATE(), N'Active');
+
+    UPDATE CourseSections
+    SET CurrentEnrollment = CurrentEnrollment + 1
+    WHERE SectionId = @sec_IT202;
+END;
+
+--------------------------------------------------------
+-- 3) TẠO 1 BÀI TẬP CHO LỚP IT202
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Assignments
+    WHERE SectionId = @sec_IT202
+      AND Title     = N'Bài tập 1 - Phân tích gói tin'
+)
+BEGIN
+    INSERT INTO Assignments
+        (SectionId,   Title,                                Description,
+         AttachmentPath,                        Deadline,                    Status)
+    VALUES
+        (@sec_IT202, N'Bài tập 1 - Phân tích gói tin',
+         N'Sử dụng Wireshark để phân tích gói TCP/UDP và viết báo cáo PDF.',
+         N'/assignments/IT202_BT1.pdf',
+         DATEADD(DAY, 7, GETDATE()),       -- deadline sau 7 ngày
+         N'Open');
+END;
+
+DECLARE @ass_BT1 INT = (
+    SELECT TOP 1 AssignmentId
+    FROM Assignments
+    WHERE SectionId = @sec_IT202
+      AND Title     = N'Bài tập 1 - Phân tích gói tin'
+    ORDER BY AssignmentId
+);
+
+--------------------------------------------------------
+-- 4) THÊM 1 BÀI NỘP ĐÚNG HẠN CỦA sv01
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Submissions
+    WHERE AssignmentId = @ass_BT1
+      AND StudentId    = @student_sv
+)
+BEGIN
+    INSERT INTO Submissions
+        (AssignmentId, StudentId,   FilePath,
+         SubmittedTime,                       IsLate)
+    VALUES
+        (@ass_BT1,     @student_sv, N'/submissions/sv01_IT202_BT1_v1.pdf',
+         DATEADD(DAY, 3, GETDATE()),          -- nộp sau 3 ngày, trước deadline
+         0);
+END;
+
+DECLARE @sub_BT1_sv01 INT = (
+    SELECT TOP 1 SubmissionId
+    FROM Submissions
+    WHERE AssignmentId = @ass_BT1
+      AND StudentId    = @student_sv
+    ORDER BY SubmissionId
+);
+
+--------------------------------------------------------
+-- 5) CHẤM ĐIỂM CHO BÀI NỘP TRÊN
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Grades
+    WHERE SubmissionId = @sub_BT1_sv01
+)
+BEGIN
+    INSERT INTO Grades
+        (SubmissionId,   Score, Comment,                                                 GradedBy)
+    VALUES
+        (@sub_BT1_sv01,  8.50,  N'Bài làm tốt, phân tích rõ, cần bổ sung phần kết luận.', @uid_gv01);
+    -- Nếu GradedBy của bạn FK sang Teachers(TeacherId) thì đổi @uid_gv01 thành @teacher_gv
+END;
+GO
+
+USE ElearningDB;
+GO
+
+--------------------------------------------------------
+-- DỮ LIỆU MẪU BỔ SUNG CHO UC-05 – QUẢN LÝ ĐIỂM & PHẢN HỒI
+--------------------------------------------------------
+
+-- 0) BỔ SUNG THÊM 2 SINH VIÊN DEMO: sv02, sv03
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'sv02')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'sv02', N'123456', N'Lê Thị C', N'sv02@example.com', N'SV', 1);
+
+    DECLARE @uid_sv02_new INT = SCOPE_IDENTITY();
+
+    INSERT INTO Students (UserId, ClassName, Faculty)
+    VALUES (@uid_sv02_new, N'D18QTANM', N'Công nghệ thông tin');
+END;
+
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'sv03')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'sv03', N'123456', N'Phạm Văn D', N'sv03@example.com', N'SV', 1);
+
+    DECLARE @uid_sv03_new INT = SCOPE_IDENTITY();
+
+    INSERT INTO Students (UserId, ClassName, Faculty)
+    VALUES (@uid_sv03_new, N'D18QTANM', N'Công nghệ thông tin');
+END;
+
+--------------------------------------------------------
+-- 1) LẤY LẠI CÁC ID CẦN DÙNG
+--------------------------------------------------------
+DECLARE @uid_sv01 INT = (SELECT UserId FROM Users WHERE Username = N'sv01');
+DECLARE @uid_sv02 INT = (SELECT UserId FROM Users WHERE Username = N'sv02');
+DECLARE @uid_sv03 INT = (SELECT UserId FROM Users WHERE Username = N'sv03');
+DECLARE @uid_gv01 INT = (SELECT UserId FROM Users WHERE Username = N'gv01');
+
+DECLARE @st_sv01 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv01);
+DECLARE @st_sv02 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv02);
+DECLARE @st_sv03 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv03);
+
+DECLARE @teacher_gv01 INT = (SELECT TeacherId FROM Teachers WHERE UserId = @uid_gv01);
+
+-- Môn CƠ SỞ DỮ LIỆU đã được tạo ở trên với CourseCode = 'IT201'
+DECLARE @course_IT201 INT = (
+    SELECT CourseId FROM Courses WHERE CourseCode = N'IT201'
+);
+
+IF @course_IT201 IS NULL
+BEGIN
+    PRINT N'[UC05] Không tìm thấy môn IT201. Hãy chắc chắn đã chạy phần INSERT Courses ở trên.';
+END
+ELSE
+BEGIN
+    --------------------------------------------------------
+    -- 2) TẠO 1 LỚP HỌC PHẦN IT201 DO gv01 PHỤ TRÁCH
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM CourseSections
+        WHERE CourseId = @course_IT201
+          AND Semester = N'2025-2026 HK1'
+          AND [Year]   = 2025
+    )
+    BEGIN
+        INSERT INTO CourseSections
+            (CourseId,     Semester,          [Year], Room,   MaxEnrollment, CurrentEnrollment, Status,  TeacherId)
+        VALUES
+            (@course_IT201, N'2025-2026 HK1', 2025,   N'B202', 60,            0,                N'Open', @teacher_gv01);
+    END;
+
+    DECLARE @sec_IT201 INT =
+    (
+        SELECT TOP 1 SectionId
+        FROM CourseSections
+        WHERE CourseId = @course_IT201
+          AND Semester = N'2025-2026 HK1'
+          AND [Year]   = 2025
+        ORDER BY SectionId
+    );
+
+    --------------------------------------------------------
+    -- 3) ĐĂNG KÝ 3 SINH VIÊN VÀO LỚP HỌC PHẦN IT201
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv01 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv01, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv02 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv02, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv03 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv03, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    -- Cập nhật lại sĩ số hiện tại cho chính xác
+    UPDATE CourseSections
+    SET CurrentEnrollment = (
+        SELECT COUNT(*) FROM Enrollments e WHERE e.SectionId = CourseSections.SectionId
+    )
+    WHERE SectionId = @sec_IT201;
+
+    --------------------------------------------------------
+    -- 4) TẠO 2 BÀI TẬP CHO LỚP IT201
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 1 - Thiết kế ERD'
+    )
+    BEGIN
+        INSERT INTO Assignments
+            (SectionId,  Title,                               Description,
+             AttachmentPath,                        Deadline,                     Status)
+        VALUES
+            (@sec_IT201, N'Bài tập 1 - Thiết kế ERD',
+             N'Vẽ sơ đồ ER cho hệ thống quản lý thư viện.',
+             N'/assignments/IT201_BT1_ERD.pdf',
+             DATEADD(DAY, 7, GETDATE()),
+             N'Open');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 2 - Thiết kế lược đồ quan hệ'
+    )
+    BEGIN
+        INSERT INTO Assignments
+            (SectionId,  Title,                                       Description,
+             AttachmentPath,                        Deadline,                     Status)
+        VALUES
+            (@sec_IT201, N'Bài tập 2 - Thiết kế lược đồ quan hệ',
+             N'Chuyển ERD sang lược đồ quan hệ, chuẩn hóa đến 3NF.',
+             N'/assignments/IT201_BT2_Relation.pdf',
+             DATEADD(DAY, 14, GETDATE()),
+             N'Open');
+    END;
+
+    DECLARE @ass_IT201_BT1 INT =
+    (
+        SELECT TOP 1 AssignmentId
+        FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 1 - Thiết kế ERD'
+        ORDER BY AssignmentId
+    );
+
+    DECLARE @ass_IT201_BT2 INT =
+    (
+        SELECT TOP 1 AssignmentId
+        FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 2 - Thiết kế lược đồ quan hệ'
+        ORDER BY AssignmentId
+    );
+
+    --------------------------------------------------------
+    -- 5) SUBMISSIONS + ĐIỂM CHO BT1 (ERD)
+    --------------------------------------------------------
+    -- sv01
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv01
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv01,   N'/submissions/sv01_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 3, GETDATE()),          0);
+    END;
+
+    DECLARE @sub_BT1_sv01 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv01
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv01
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                             GradedBy)
+        VALUES
+            (@sub_BT1_sv01, 9.00,  N'Bài làm rất tốt, ERD rõ ràng, đầy đủ thực thể.',   @uid_gv01);
+        -- Nếu FK_Grades_Teachers của bạn trỏ sang Teachers(TeacherId) thì đổi @uid_gv01 thành @teacher_gv01
+    END;
+
+    -- sv02
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv02
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv02,   N'/submissions/sv02_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 6, GETDATE()),          0);
+    END;
+
+    DECLARE @sub_BT1_sv02 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv02
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv02
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                                     GradedBy)
+        VALUES
+            (@sub_BT1_sv02, 7.50, N'Tương đối tốt, thiếu một số thuộc tính khóa ngoại.',       @uid_gv01);
+    END;
+
+    -- sv03 (nộp trễ)
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv03
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv03,   N'/submissions/sv03_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 9, GETDATE()),          1); -- nộp sau deadline 7 ngày
+    END;
+
+    DECLARE @sub_BT1_sv03 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv03
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv03
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                                    GradedBy)
+        VALUES
+            (@sub_BT1_sv03, 6.00, N'Bài nộp trễ, ERD còn thiếu mối quan hệ, cần hoàn thiện.', @uid_gv01);
+    END;
+
+    --------------------------------------------------------
+    -- 6) SUBMISSIONS + ĐIỂM CHO BT2 (LƯỢC ĐỒ QUAN HỆ)
+    --------------------------------------------------------
+    -- sv01
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv01
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT2,  @st_sv01,   N'/submissions/sv01_IT201_BT2_v1.pdf',
+             DATEADD(DAY, 10, GETDATE()),         0);
+    END;
+
+    DECLARE @sub_BT2_sv01 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv01
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT2_sv01
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                              GradedBy)
+        VALUES
+            (@sub_BT2_sv01, 8.75, N'Lược đồ quan hệ đúng, chuẩn hóa tốt đến 3NF.',      @uid_gv01);
+    END;
+
+    -- sv02 (chưa chấm điểm, tạo Submission nhưng không tạo Grade để thấy case "chưa có điểm")
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv02
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT2,  @st_sv02,   N'/submissions/sv02_IT201_BT2_v1.pdf',
+             DATEADD(DAY, 12, GETDATE()),         0);
+    END;
+    -- Cố ý KHÔNG thêm dòng vào Grades để UC-05 có cả trường hợp "đã nộp nhưng chưa chấm"
+
+    -- sv03 (chưa nộp => không có Submission, không có Grade) 
+    -- => UC-05 vẫn chỉ show những bài có Grade (đúng với query hiện tại)
+END;
+GO
 
 
 

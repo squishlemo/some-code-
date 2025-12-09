@@ -7,7 +7,7 @@ namespace ElearningWinForms.Data
     {
         // NHỚ sửa Data Source theo SQL Server của bạn
         private static readonly string connectionString =
-            @"Data Source=.\SQLEXPRESS;Initial Catalog=ElearningDB;Integrated Security=True;";
+            @"Data Source=.\THEPINE;Initial Catalog=ElearningDB;Integrated Security=True;";
 
         public static SqlConnection GetConnection()
         {

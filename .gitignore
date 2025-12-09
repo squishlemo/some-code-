@@ -1,0 +1,6 @@
+/ElearningWinForms/bin/
+/ElearningWinForms/obj/
+*.exe
+*.pdb
+*.cache
+*.vs/
