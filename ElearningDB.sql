@@ -216,6 +216,154 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('dbo.RegistrationRequests', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.RegistrationRequests (
+        RequestId      INT IDENTITY(1,1) PRIMARY KEY,
+        Username       NVARCHAR(50)  NOT NULL,
+        PasswordHash   NVARCHAR(255) NOT NULL,
+        FullName       NVARCHAR(100) NOT NULL,
+        Email          NVARCHAR(100) NOT NULL,
+        Role           NVARCHAR(20)  NOT NULL, -- 'SV', 'GV', 'Admin'
+        Status         NVARCHAR(20)  NOT NULL DEFAULT N'PendingEmail', 
+        OTP            NVARCHAR(10)  NULL,
+        CreatedAt      DATETIME      NOT NULL DEFAULT GETDATE()
+    );
+END;
+GO
+
+USE ElearningDB;
+GO
+
+--------------------------------------------------------
+-- 1) BẢNG KHOA
+--------------------------------------------------------
+IF OBJECT_ID('dbo.Faculties', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Faculties
+    (
+        FacultyId   INT IDENTITY(1,1) PRIMARY KEY,
+        FacultyName NVARCHAR(100) NOT NULL UNIQUE
+    );
+END;
+GO
+
+--------------------------------------------------------
+-- 2) BẢNG NGÀNH
+--------------------------------------------------------
+IF OBJECT_ID('dbo.Majors', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Majors
+    (
+        MajorId    INT IDENTITY(1,1) PRIMARY KEY,
+        MajorName  NVARCHAR(100) NOT NULL,
+        FacultyId  INT NOT NULL,
+        CONSTRAINT FK_Majors_Faculties
+            FOREIGN KEY (FacultyId) REFERENCES Faculties(FacultyId)
+    );
+END;
+GO
+
+--------------------------------------------------------
+-- 3) BẢNG LỚP
+--------------------------------------------------------
+IF OBJECT_ID('dbo.Classes', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Classes
+    (
+        ClassId   INT IDENTITY(1,1) PRIMARY KEY,
+        ClassName NVARCHAR(100) NOT NULL,
+        MajorId   INT NOT NULL,
+        CONSTRAINT FK_Classes_Majors
+            FOREIGN KEY (MajorId) REFERENCES Majors(MajorId)
+    );
+END;
+GO
+
+--------------------------------------------------------
+-- 4) BẢNG HỌC VỊ GIÁO VIÊN
+--------------------------------------------------------
+IF OBJECT_ID('dbo.AcademicTitles', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AcademicTitles
+    (
+        TitleId   INT IDENTITY(1,1) PRIMARY KEY,
+        TitleName NVARCHAR(50) NOT NULL UNIQUE
+    );
+END;
+GO
+
+--------------------------------------------------------
+-- 5) DỮ LIỆU MẪU
+--------------------------------------------------------
+
+-- KHOA
+IF NOT EXISTS (SELECT 1 FROM Faculties WHERE FacultyName = N'Khoa Công nghệ thông tin')
+    INSERT INTO Faculties(FacultyName) VALUES (N'Khoa Công nghệ thông tin');
+
+IF NOT EXISTS (SELECT 1 FROM Faculties WHERE FacultyName = N'Khoa Kỹ thuật điện tử')
+    INSERT INTO Faculties(FacultyName) VALUES (N'Khoa Kỹ thuật điện tử');
+
+DECLARE @FacCNTT INT = (SELECT FacultyId FROM Faculties WHERE FacultyName = N'Khoa Công nghệ thông tin');
+DECLARE @FacKTDT INT = (SELECT FacultyId FROM Faculties WHERE FacultyName = N'Khoa Kỹ thuật điện tử');
+
+-- NGÀNH
+IF NOT EXISTS (SELECT 1 FROM Majors WHERE MajorName = N'Công nghệ thông tin')
+    INSERT INTO Majors(MajorName, FacultyId) VALUES (N'Công nghệ thông tin', @FacCNTT);
+
+IF NOT EXISTS (SELECT 1 FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử')
+    INSERT INTO Majors(MajorName, FacultyId) VALUES (N'Công nghệ kỹ thuật điện, điện tử', @FacKTDT);
+
+IF NOT EXISTS (SELECT 1 FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa')
+    INSERT INTO Majors(MajorName, FacultyId) VALUES (N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa', @FacKTDT);
+
+DECLARE @MajorCNTT INT = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin');
+DECLARE @MajorDien INT = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử');
+DECLARE @MajorTĐH  INT = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa');
+
+-- LỚP CNTT
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Quản trị an ninh mạng')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Quản trị an ninh mạng', @MajorCNTT);
+
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Công nghệ phần mềm')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Công nghệ phần mềm', @MajorCNTT);
+
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Thương mại điện tử')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Thương mại điện tử', @MajorCNTT);
+
+-- LỚP CNKT ĐIỆN, ĐIỆN TỬ
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Công nghệ kỹ thuật điện, điện tử 1')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Công nghệ kỹ thuật điện, điện tử 1', @MajorDien);
+
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Công nghệ kỹ thuật điện, điện tử 2')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Công nghệ kỹ thuật điện, điện tử 2', @MajorDien);
+
+-- LỚP TỰ ĐỘNG HÓA
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Công nghệ Kỹ thuật Điều khiển Tự động hóa')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Công nghệ Kỹ thuật Điều khiển Tự động hóa', @MajorTĐH);
+
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Điều khiển thiết bị điện công nghiệp')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Điều khiển thiết bị điện công nghiệp', @MajorTĐH);
+
+IF NOT EXISTS (SELECT 1 FROM Classes WHERE ClassName = N'D18 Tin học cho Điều khiển và Tự động hóa')
+    INSERT INTO Classes(ClassName, MajorId) VALUES (N'D18 Tin học cho Điều khiển và Tự động hóa', @MajorTĐH);
+
+-- HỌC VỊ
+IF NOT EXISTS (SELECT 1 FROM AcademicTitles WHERE TitleName = N'Thạc sĩ')
+    INSERT INTO AcademicTitles(TitleName) VALUES (N'Thạc sĩ');
+
+IF NOT EXISTS (SELECT 1 FROM AcademicTitles WHERE TitleName = N'Tiến sĩ')
+    INSERT INTO AcademicTitles(TitleName) VALUES (N'Tiến sĩ');
+GO
+
+
+ALTER TABLE RegistrationRequests
+ADD ClassName     NVARCHAR(50)   NULL,
+    Faculty       NVARCHAR(100)  NULL,
+    Department    NVARCHAR(100)  NULL,
+    AcademicTitle NVARCHAR(50)   NULL;
+
+
 --------------------------------------------------------
 -- (TÙY CHỌN) THÊM 1 SV DEMO ĐỂ TEST SAU NÀY
 --------------------------------------------------------
@@ -231,3 +379,149 @@ BEGIN
     VALUES (@uid, N'D18QTANM', N'Công nghệ thông tin');
 END
 GO
+
+
+--------------------------------------------------------
+-- ADMIN DEMO
+--------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'admin')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'admin', N'123456', N'Quản trị viên hệ thống', N'admin@example.com', N'Admin', 1);
+
+    DECLARE @uid_admin INT = SCOPE_IDENTITY();
+
+    INSERT INTO Admins (UserId, PermissionLevel)
+    VALUES (@uid_admin, 10); -- PermissionLevel tự quy ước, 10 = cao nhất
+END
+GO
+
+--------------------------------------------------------
+-- GIẢNG VIÊN 01
+--------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'gv01')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'gv01', N'123456', N'Nguyễn Thị B', N'gv01@example.com', N'GV', 1);
+
+    DECLARE @uid_gv01 INT = SCOPE_IDENTITY();
+
+    INSERT INTO Teachers (UserId, Department, AcademicTitle)
+    VALUES (@uid_gv01, N'Khoa Công nghệ thông tin', N'ThS.');
+END
+GO
+
+USE ElearningDB;
+GO
+
+-- Thêm cột MajorId nếu chưa có
+IF COL_LENGTH('dbo.Courses', 'MajorId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Courses
+        ADD MajorId INT NULL;
+END;
+GO
+
+-- Thêm khóa ngoại Courses.MajorId -> Majors.MajorId (nếu chưa có)
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Courses_Majors')
+BEGIN
+    ALTER TABLE dbo.Courses
+        ADD CONSTRAINT FK_Courses_Majors
+        FOREIGN KEY (MajorId) REFERENCES dbo.Majors(MajorId);
+END;
+GO
+
+
+
+
+USE ElearningDB;
+GO
+
+DECLARE @MajorCNTT INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin');
+DECLARE @MajorDien INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử');
+DECLARE @MajorTĐH  INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa');
+
+
+
+
+USE ElearningDB;
+GO
+
+INSERT INTO Courses (CourseCode, CourseName, Description, Credit, Status, MajorId)
+VALUES
+(N'IT101', N'Nhập môn Công nghệ thông tin',
+ N'Giới thiệu ngành, môi trường làm việc và các hướng chuyên sâu CNTT.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin')),
+
+(N'IT102', N'Lập trình C/C++',
+ N'Cấu trúc dữ liệu cơ bản, con trỏ, mảng, hàm, struct, file.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin')),
+
+(N'IT201', N'Cơ sở dữ liệu',
+ N'Mô hình quan hệ, SQL, thiết kế lược đồ, chuẩn hóa.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin')),
+
+(N'IT202', N'Mạng máy tính',
+ N'Kiến trúc mạng, mô hình OSI, TCP/IP, địa chỉ IP, định tuyến.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin')),
+
+(N'IT203', N'An toàn mạng',
+ N'Các khái niệm tấn công, phòng thủ, mã hóa cơ bản, firewall.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin'));
+
+
+ INSERT INTO Courses (CourseCode, CourseName, Description, Credit, Status, MajorId)
+VALUES
+(N'EE101', N'Mạch điện',
+ N'Định luật mạch điện, mạch một chiều, xoay chiều, phân tích mạch.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử')),
+
+(N'EE102', N'Kỹ thuật điện',
+ N'Máy điện, máy biến áp, các thiết bị điện cơ bản.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử')),
+
+(N'EE201', N'Hệ thống cung cấp điện',
+ N'Cấu trúc hệ thống điện, truyền tải – phân phối – sử dụng.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử')),
+
+(N'EE202', N'Điện tử công suất',
+ N'Linh kiện bán dẫn công suất, chỉnh lưu, nghịch lưu, điều khiển động cơ.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử'));
+
+
+ INSERT INTO Courses (CourseCode, CourseName, Description, Credit, Status, MajorId)
+VALUES
+(N'AT101', N'Cơ sở điều khiển tự động',
+ N'Mô hình hóa hệ thống, hàm truyền, ổn định, đáp ứng quá độ.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa')),
+
+(N'AT102', N'Cảm biến và đo lường',
+ N'Nguyên lý và ứng dụng của cảm biến, hệ đo lường trong tự động hóa.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa')),
+
+(N'AT201', N'PLC và hệ thống điều khiển',
+ N'Lập trình PLC, điều khiển dây chuyền, hệ thống tự động.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa')),
+
+(N'AT202', N'Hệ thống SCADA',
+ N'Giám sát, điều khiển và thu thập dữ liệu trong công nghiệp.',
+ 3, N'Active',
+ (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa'));
+
+
+
+
+
+
