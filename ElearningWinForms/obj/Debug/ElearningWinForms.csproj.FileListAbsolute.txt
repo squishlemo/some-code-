@@ -1,0 +1,21 @@
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.AssemblyReference.cache
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.Properties.Resources.resources
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.GenerateResource.cache
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.CoreCompileInputs.cache
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.AdminForm.resources
+D:\c# dotnet\ElearningWinForms\bin\Debug\ElearningWinForms.exe.config
+D:\c# dotnet\ElearningWinForms\bin\Debug\ElearningWinForms.exe
+D:\c# dotnet\ElearningWinForms\bin\Debug\ElearningWinForms.pdb
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.exe
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.pdb
+D:\c# dotnet\ElearningWinForms\obj\Debug\ElearningWinForms.exe.config
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.AssemblyReference.cache
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.AdminForm.resources
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.Properties.Resources.resources
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.GenerateResource.cache
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.csproj.CoreCompileInputs.cache
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.exe
+E:\C#.NET\Product\ElearningWinForms\obj\Debug\ElearningWinForms.pdb
+E:\C#.NET\Product\ElearningWinForms\bin\Debug\ElearningWinForms.exe.config
+E:\C#.NET\Product\ElearningWinForms\bin\Debug\ElearningWinForms.exe
+E:\C#.NET\Product\ElearningWinForms\bin\Debug\ElearningWinForms.pdb
