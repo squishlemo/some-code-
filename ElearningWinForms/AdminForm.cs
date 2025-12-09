@@ -10,13 +10,11 @@ namespace ElearningWinForms
     {
         private int CurrentUserId;
 
-        // ==== CONTROL FIELD ====
         private DataGridView dgvRequests;
         private Button btnRefreshRequests;
         private Button btnApprove;
         private Button btnReject;
         private Button btnLogout;
-        // =======================
 
         public AdminForm(int currentUserId)
         {
@@ -88,43 +86,50 @@ namespace ElearningWinForms
             string username = row["Username"].ToString();
             string fullName = row["FullName"].ToString();
             string email = row["Email"].ToString();
-            string role = row["Role"].ToString();
-
-            string sqlGetDetail = @"
-                SELECT PasswordHash
-                FROM RegistrationRequests
-                WHERE RequestId = @id AND Status = N'PendingAdmin'";
-
-            object passObj = DbHelper.ExecuteScalar(
-                sqlGetDetail,
-                new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
-            );
-
-            if (passObj == null || passObj == DBNull.Value)
-            {
-                MessageBox.Show("Không tìm thấy chi tiết yêu cầu (có thể đã được xử lý).",
-                                "Lỗi",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                LoadPendingRequests();
-                return;
-            }
-
-            string password = passObj.ToString();
-
-            DialogResult confirm = MessageBox.Show(
-                "Bạn có chắc chắn muốn DUYỆT yêu cầu này và tạo tài khoản cho người dùng?\n\n" +
-                $"Username: {username}\nRole: {role}",
-                "Xác nhận duyệt",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-
-            if (confirm != DialogResult.Yes)
-                return;
+            string role = row["Role"].ToString(); // "SV" / "GV" / "Admin"
 
             try
             {
+                // Lấy đầy đủ thông tin từ RegistrationRequests
+                string sqlGetDetail = @"
+                    SELECT PasswordHash, ClassName, Faculty, Department, AcademicTitle
+                    FROM RegistrationRequests
+                    WHERE RequestId = @id AND Status = N'PendingAdmin'";
+
+                DataTable detailTable = DbHelper.GetDataTable(
+                    sqlGetDetail,
+                    new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
+                );
+
+                if (detailTable.Rows.Count == 0)
+                {
+                    MessageBox.Show("Không tìm thấy chi tiết yêu cầu (có thể đã được xử lý).",
+                                    "Lỗi",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error);
+                    LoadPendingRequests();
+                    return;
+                }
+
+                DataRow detail = detailTable.Rows[0];
+
+                string password = detail["PasswordHash"].ToString();
+                string className = detail["ClassName"] == DBNull.Value ? null : detail["ClassName"].ToString();
+                string faculty = detail["Faculty"] == DBNull.Value ? null : detail["Faculty"].ToString();
+                string department = detail["Department"] == DBNull.Value ? null : detail["Department"].ToString();
+                string academicTitle = detail["AcademicTitle"] == DBNull.Value ? null : detail["AcademicTitle"].ToString();
+
+                DialogResult confirm = MessageBox.Show(
+                    "Bạn có chắc chắn muốn DUYỆT yêu cầu này và tạo tài khoản cho người dùng?\n\n" +
+                    $"Username: {username}\nRole: {role}",
+                    "Xác nhận duyệt",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (confirm != DialogResult.Yes)
+                    return;
+
                 // 1) Tạo user mới trong bảng Users
                 string sqlInsertUser = @"
                     INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
@@ -152,8 +157,10 @@ namespace ElearningWinForms
                     DbHelper.ExecuteNonQuery(
                         sql,
                         new SqlParameter("@uid", SqlDbType.Int) { Value = newUserId },
-                        new SqlParameter("@class", SqlDbType.NVarChar, 50) { Value = "Chưa cập nhật" },
-                        new SqlParameter("@faculty", SqlDbType.NVarChar, 100) { Value = "Chưa cập nhật" }
+                        new SqlParameter("@class", SqlDbType.NVarChar, 50)
+                        { Value = (object)(className ?? "Chưa cập nhật") },
+                        new SqlParameter("@faculty", SqlDbType.NVarChar, 100)
+                        { Value = (object)(faculty ?? "Chưa cập nhật") }
                     );
                 }
                 else if (role == "GV")
@@ -165,8 +172,10 @@ namespace ElearningWinForms
                     DbHelper.ExecuteNonQuery(
                         sql,
                         new SqlParameter("@uid", SqlDbType.Int) { Value = newUserId },
-                        new SqlParameter("@dept", SqlDbType.NVarChar, 100) { Value = "Chưa cập nhật" },
-                        new SqlParameter("@title", SqlDbType.NVarChar, 50) { Value = "GV" }
+                        new SqlParameter("@dept", SqlDbType.NVarChar, 100)
+                        { Value = (object)(department ?? "Chưa cập nhật") },
+                        new SqlParameter("@title", SqlDbType.NVarChar, 50)
+                        { Value = (object)(academicTitle ?? "GV") }
                     );
                 }
                 else if (role == "Admin")
@@ -257,20 +266,22 @@ namespace ElearningWinForms
             }
         }
 
-        // Ví dụ: sự kiện cho nút Đăng Xuất
         private void btnLogout_Click(object sender, EventArgs e)
         {
-            DialogResult confirm = MessageBox.Show("Bạn có chắc chắn muốn đăng xuất?",
-                                                    "Xác nhận đăng xuất",
-                                                    MessageBoxButtons.YesNo,
-                                                    MessageBoxIcon.Question);
+            DialogResult confirm = MessageBox.Show(
+                "Bạn có chắc chắn muốn đóng màn hình quản trị?",
+                "Xác nhận",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
             if (confirm == DialogResult.Yes)
             {
                 this.Close();
             }
         }
 
-        // =============== KHỞI TẠO CONTROL (TỰ DESIGN BẰNG CODE) ===============
+        // =============== KHỞI TẠO CONTROL (TỰ TẠO UI BẰNG CODE) ===============
 
         private void InitializeComponent()
         {
