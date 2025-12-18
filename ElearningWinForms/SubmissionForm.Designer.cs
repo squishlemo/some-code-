@@ -27,22 +27,26 @@
             // 
             this.dgvSubmissions.AllowUserToAddRows = false;
             this.dgvSubmissions.AllowUserToDeleteRows = false;
+            this.dgvSubmissions.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.dgvSubmissions.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dgvSubmissions.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvSubmissions.Location = new System.Drawing.Point(12, 12);
+            this.dgvSubmissions.Location = new System.Drawing.Point(10, 10);
             this.dgvSubmissions.MultiSelect = false;
             this.dgvSubmissions.Name = "dgvSubmissions";
             this.dgvSubmissions.ReadOnly = true;
             this.dgvSubmissions.RowTemplate.Height = 25;
             this.dgvSubmissions.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvSubmissions.Size = new System.Drawing.Size(560, 260);
+            this.dgvSubmissions.Size = new System.Drawing.Size(711, 318);
             this.dgvSubmissions.TabIndex = 0;
             // 
             // btnSubmit
             // 
-            this.btnSubmit.Location = new System.Drawing.Point(12, 285);
+            this.btnSubmit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSubmit.Location = new System.Drawing.Point(561, 344);
             this.btnSubmit.Name = "btnSubmit";
-            this.btnSubmit.Size = new System.Drawing.Size(160, 30);
+            this.btnSubmit.Size = new System.Drawing.Size(137, 26);
             this.btnSubmit.TabIndex = 1;
             this.btnSubmit.Text = "Nộp bài (SV)";
             this.btnSubmit.UseVisualStyleBackColor = true;
@@ -50,9 +54,10 @@
             // 
             // btnGrade
             // 
-            this.btnGrade.Location = new System.Drawing.Point(412, 285);
+            this.btnGrade.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnGrade.Location = new System.Drawing.Point(561, 344);
             this.btnGrade.Name = "btnGrade";
-            this.btnGrade.Size = new System.Drawing.Size(160, 30);
+            this.btnGrade.Size = new System.Drawing.Size(137, 26);
             this.btnGrade.TabIndex = 2;
             this.btnGrade.Text = "Chấm điểm (GV)";
             this.btnGrade.UseVisualStyleBackColor = true;
@@ -60,15 +65,15 @@
             // 
             // SubmissionForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(584, 331);
+            this.ClientSize = new System.Drawing.Size(723, 430);
             this.Controls.Add(this.btnGrade);
             this.Controls.Add(this.btnSubmit);
             this.Controls.Add(this.dgvSubmissions);
             this.Name = "SubmissionForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Nộp bài & chấm điểm";
+            this.Text = " ";
             this.Load += new System.EventHandler(this.SubmissionForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvSubmissions)).EndInit();
             this.ResumeLayout(false);

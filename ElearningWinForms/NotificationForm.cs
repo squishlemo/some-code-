@@ -1,8 +1,11 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Net;
 using System.Windows.Forms;
 using ElearningWinForms.Data;
+using ElearningWinForms.Security;
 
 namespace ElearningWinForms
 {
@@ -280,6 +283,7 @@ WHERE NotificationId = @NotificationId
             {
                 int notificationId = InsertNotification(content, "GLOBAL", null);
                 InsertRecipientsGlobal(notificationId);
+                TrySendNotificationEmails(notificationId, content, "Toàn hệ thống", null, null);
             }
             else // Theo khoa
             {
@@ -293,6 +297,7 @@ WHERE NotificationId = @NotificationId
                 string facultyName = cboFaculty.SelectedValue.ToString();
                 int notificationId = InsertNotification(content, "FACULTY", null);
                 InsertRecipientsForFaculty(notificationId, facultyName);
+                TrySendNotificationEmails(notificationId, content, "Theo khoa", facultyName, null);
             }
         }
 
@@ -309,6 +314,123 @@ WHERE NotificationId = @NotificationId
 
             int notificationId = InsertNotification(content, "SECTION", sectionId);
             InsertRecipientsForSection(notificationId, sectionId);
+            TrySendNotificationEmails(notificationId, content, "Lớp học phần", null, sectionId);
+        }
+
+        private void TrySendNotificationEmails(int notificationId, string content, string scopeLabel, string facultyName, int? sectionId)
+        {
+            try
+            {
+                var emails = GetRecipientEmails(notificationId);
+                if (emails.Count == 0)
+                    return;
+
+                string senderName = GetSenderName(CurrentUserId);
+                string subject = BuildNotificationEmailSubject(scopeLabel, facultyName, sectionId);
+                string html = BuildNotificationEmailHtml(senderName, content, scopeLabel, facultyName, sectionId);
+
+                EmailSender.SendHtmlEmailBcc(emails, subject, html);
+            }
+            catch (Exception ex)
+            {
+                // Không làm fail luồng gửi in-app, chỉ thông báo nhẹ
+                MessageBox.Show(
+                    "Đã gửi thông báo trong hệ thống, nhưng gửi email bị lỗi:\n" + ex.Message,
+                    "Cảnh báo gửi email",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        private System.Collections.Generic.List<string> GetRecipientEmails(int notificationId)
+        {
+            string sql = @"
+SELECT DISTINCT u.Email
+FROM NotificationRecipients nr
+JOIN Users u ON nr.UserId = u.UserId
+WHERE nr.NotificationId = @NotificationId
+  AND u.IsActive = 1
+  AND u.Email IS NOT NULL
+  AND LTRIM(RTRIM(u.Email)) <> ''";
+
+            DataTable dt = DbHelper.GetDataTable(sql,
+                new SqlParameter("@NotificationId", notificationId));
+
+            return dt.AsEnumerable()
+                .Select(r => r["Email"].ToString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private string GetSenderName(int userId)
+        {
+            object r = DbHelper.ExecuteScalar(
+                "SELECT FullName FROM Users WHERE UserId = @id",
+                new SqlParameter("@id", userId));
+            return (r == null || r == DBNull.Value) ? "Hệ thống" : r.ToString();
+        }
+
+        private string BuildNotificationEmailSubject(string scopeLabel, string facultyName, int? sectionId)
+        {
+            if (sectionId.HasValue)
+            {
+                string sectionInfo = GetSectionInfoLine(sectionId.Value);
+                return $"[Elearning] Thông báo mới - {sectionInfo}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(facultyName))
+                return $"[Elearning] Thông báo mới - Khoa: {facultyName}";
+
+            return $"[Elearning] Thông báo mới - {scopeLabel}";
+        }
+
+        private string BuildNotificationEmailHtml(string senderName, string content, string scopeLabel, string facultyName, int? sectionId)
+        {
+            string scopeText = scopeLabel;
+            if (!string.IsNullOrWhiteSpace(facultyName))
+                scopeText += " - " + facultyName;
+            if (sectionId.HasValue)
+                scopeText = "Lớp học phần - " + GetSectionInfoLine(sectionId.Value);
+
+            string safeSender = WebUtility.HtmlEncode(senderName ?? "Hệ thống");
+            string safeScope = WebUtility.HtmlEncode(scopeText);
+            string safeContent = WebUtility.HtmlEncode(content ?? string.Empty).Replace("\n", "<br/>");
+
+            return @"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <style>
+    .box { max-width: 680px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; }
+    .title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+    .meta  { color:#666; font-size: 12px; margin-bottom: 12px; }
+    .content { font-size: 14px; line-height: 1.5; padding: 12px; background:#fafafa; border-radius: 6px; }
+    .note { color:#777; font-size: 12px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class='box'>
+    <div class='title'>Thông báo mới từ Elearning</div>
+    <div class='meta'>Người gửi: " + safeSender + @"<br/>Phạm vi: " + safeScope + @"</div>
+    <div class='content'>" + safeContent + @"</div>
+    <div class='note'>Email này được gửi tự động. Vui lòng không trả lời.</div>
+  </div>
+</body>
+</html>";
+        }
+
+        private string GetSectionInfoLine(int sectionId)
+        {
+            string sql = @"
+SELECT TOP 1 c.CourseCode + N' - ' + c.CourseName + N' (' + s.Semester + N'/' + CAST(s.[Year] AS NVARCHAR(4)) + N')'
+FROM CourseSections s
+JOIN Courses c ON s.CourseId = c.CourseId
+WHERE s.SectionId = @SectionId;";
+
+            object r = DbHelper.ExecuteScalar(sql, new SqlParameter("@SectionId", sectionId));
+            return (r == null || r == DBNull.Value) ? ("Section " + sectionId) : r.ToString();
         }
 
         private int InsertNotification(string content, string targetType, int? targetRefId)

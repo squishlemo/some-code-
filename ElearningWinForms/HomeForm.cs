@@ -4,128 +4,225 @@ using System.Windows.Forms;
 namespace ElearningWinForms
 {
     /// <summary>
-    /// Main shell: 1 khung duy nhất, chứa menu + khu vực hiển thị các use case.
+    /// Form chính: bên trái là menu, giữa là vùng nội dung (panelContent) để mở các UC.
     /// </summary>
     public partial class HomeForm : Form
     {
-        // Thông tin user hiện tại
+        // Thông tin user hiện tại (nhận từ LoginForm)
         public int CurrentUserId { get; private set; }
-        public string CurrentRole { get; private set; }     // "SV", "GV", "Admin"
-        public string CurrentUserName { get; private set; } // Họ tên
-        public string CurrentCode { get; private set; }     // Mã SV / GV / Admin
+        public string CurrentRole { get; private set; }      // "SV", "GV", "Admin"
+        public string CurrentUserName { get; private set; }  // Họ tên
+        public string CurrentCode { get; private set; }      // Mã SV/GV/Admin
 
-        // Form con đang hiển thị
         private Form _currentChildForm;
 
-        // Constructor dùng khi gọi sau khi đăng nhập
-        public HomeForm(int userId, string role, string userName, string code)
+        public HomeForm(int userId, string role, string fullName, string code)
         {
             InitializeComponent();
 
             CurrentUserId = userId;
             CurrentRole = role;
-            CurrentUserName = userName;
+            CurrentUserName = fullName;
             CurrentCode = code;
-        }
-
-        public HomeForm(int userId, string role)
-        {
         }
 
         private void HomeForm_Load(object sender, EventArgs e)
         {
             // Gán thông tin lên header
-            lblUserName.Text = CurrentUserName;
-            lblUserCode.Text = CurrentCode;
-            lblRole.Text = CurrentRole;
+            lblUserName.Text = $"Xin chào: {CurrentUserName}";
+            lblUserCode.Text = $"Mã: {CurrentCode}";
+            lblRole.Text = $"Role: {CurrentRole}";
 
-            // Demo phân quyền đơn giản
-            if (CurrentRole != "Admin")
-            {
-                btnAdmin.Enabled = false;
-            }
+            // Phân quyền đơn giản: chỉ Admin dùng nút Admin
+            btnAdmin.Enabled = (CurrentRole == "Admin");
 
-            // Mặc định mở trang Khóa học chẳng hạn
+            // Nếu muốn mở sẵn UC-02 khi vào Home:
             // OpenChildForm(new CourseForm(CurrentUserId, CurrentRole));
         }
 
         /// <summary>
         /// Mở 1 form con bên trong panelContent (Dock = Fill, không border).
+        /// Đảm bảo mỗi lần chỉ có 1 child form đang hiển thị.
         /// </summary>
         private void OpenChildForm(Form childForm)
         {
-            if (_currentChildForm != null)
+            try
             {
-                _currentChildForm.Close();
+                if (_currentChildForm != null)
+                {
+                    _currentChildForm.Close();
+                    _currentChildForm.Dispose();
+                    _currentChildForm = null;
+                }
+
+                _currentChildForm = childForm;
+                childForm.TopLevel = false;
+                childForm.FormBorderStyle = FormBorderStyle.None;
+                childForm.Dock = DockStyle.Fill;
+
+                panelContent.Controls.Clear();
+                panelContent.Controls.Add(childForm);
+                panelContent.Tag = childForm;
+
+                childForm.BringToFront();
+                childForm.Show();
             }
-
-            _currentChildForm = childForm;
-            childForm.TopLevel = false;
-            childForm.FormBorderStyle = FormBorderStyle.None;
-            childForm.Dock = DockStyle.Fill;
-
-            panelContent.Controls.Clear();
-            panelContent.Controls.Add(childForm);
-            panelContent.Tag = childForm;
-
-            childForm.BringToFront();
-            childForm.Show();
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở màn hình con:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ================== MENU BUTTONS ==================
 
+        // UC-02: Khóa học
         private void btnCourses_Click(object sender, EventArgs e)
         {
-            // UC-02: Quản lý khóa học
-            OpenChildForm(new CourseForm());
+            try
+            {
+                if (CurrentRole == "Admin")
+                {
+                    // Admin: chọn giữa quản lý môn học hoặc xem DS SV đăng ký học phần
+                    var dr = MessageBox.Show(
+                        "Admin chọn:\n\nYES = Quản lý môn học\nNO = Xem học phần & DS SV đăng ký\n\n(CANCEL để hủy)",
+                        "Chức năng khóa học",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    if (dr == DialogResult.Yes)
+                        OpenChildForm(new CourseManagementForm());
+                    else if (dr == DialogResult.No)
+                        OpenChildForm(new CourseForm(CurrentUserId, "Admin"));
+                    else
+                        return;
+                }
+                else
+                {
+                    // SV, GV: xem / đăng ký / xem lớp đang dạy
+                    OpenChildForm(new CourseForm(CurrentUserId, CurrentRole));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng khóa học:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // UC-03: Bài tập
         private void btnAssignments_Click(object sender, EventArgs e)
         {
-            // UC-03: Quản lý bài tập
-            OpenChildForm(new AssignmentForm());
+            try
+            {
+                // AssignmentForm requires userId and role as constructor parameters
+                OpenChildForm(new AssignmentForm(CurrentUserId, CurrentRole));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng bài tập:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // UC-04: Nộp bài
         private void btnSubmissions_Click(object sender, EventArgs e)
         {
-            // UC-04: Nộp bài / chấm điểm
-            OpenChildForm(new SubmissionForm(CurrentUserId, CurrentRole));
+            try
+            {
+                OpenChildForm(new SubmissionForm(CurrentUserId, CurrentRole));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng nộp bài:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // UC-05: Điểm & phản hồi
         private void btnGrades_Click(object sender, EventArgs e)
         {
-            // UC-05: Điểm & phản hồi
-            OpenChildForm(new GradeManagementForm());
+            try
+            {
+                // Class thật nằm trong GradeManagementForm.cs nhưng tên lớp là GradeForm
+                OpenChildForm(new GradeForm(CurrentUserId, CurrentRole));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng điểm:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // UC-06: Thông báo
         private void btnNotifications_Click(object sender, EventArgs e)
         {
-            // UC-06: Thông báo
-            OpenChildForm(new NotificationForm(CurrentUserId, CurrentRole));
+            try
+            {
+                OpenChildForm(new NotificationForm(CurrentUserId, CurrentRole));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng thông báo:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // UC-07: Admin
         private void btnAdmin_Click(object sender, EventArgs e)
         {
-            // UC-07: Quản trị – chỉ cho Admin
-            if (CurrentRole != "Admin")
+            try
             {
-                MessageBox.Show("Chỉ Admin mới được dùng chức năng này.",
-                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                if (CurrentRole != "Admin")
+                {
+                    MessageBox.Show("Chỉ Admin mới được dùng chức năng này.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-            OpenChildForm(new AdminForm(CurrentUserId));
+                OpenChildForm(new AdminForm(CurrentUserId));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi mở chức năng Admin:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
+        // Đăng xuất
         private void btnLogout_Click(object sender, EventArgs e)
         {
-            // Đăng xuất: quay lại LoginForm
-            this.Hide();
-            using (var login = new LoginForm())
+            try
             {
-                login.ShowDialog();
+                if (_currentChildForm != null)
+                {
+                    _currentChildForm.Close();
+                    _currentChildForm.Dispose();
+                    _currentChildForm = null;
+                }
+
+                this.Hide();
+                using (var login = new LoginForm())
+                {
+                    login.ShowDialog();
+                }
+                this.Close();
             }
-            this.Close();
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi đăng xuất:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
+
+        private void HomeForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            // Chỉ thoát hẳn app nếu không còn form nào mở
+            if (Application.OpenForms.Count == 0)
+            {
+                Application.Exit();
+            }
+        }
+
     }
 }

@@ -1,13 +1,13 @@
 ﻿--------------------------------------------------------
 -- 1. TẠO DATABASE
 --------------------------------------------------------
-IF DB_ID('ElearningDB') IS NULL
+IF DB_ID('ElearningDBChat') IS NULL
 BEGIN
-    CREATE DATABASE ElearningDB;
+    CREATE DATABASE ElearningDBchat;
 END
 GO
 
-USE ElearningDB;
+USE ElearningDBChat;
 GO
 
 --------------------------------------------------------
@@ -20,13 +20,25 @@ BEGIN
     CREATE TABLE Users (
         UserId       INT IDENTITY(1,1) PRIMARY KEY,
         Username     NVARCHAR(50)  NOT NULL UNIQUE,
-        PasswordHash NVARCHAR(255) NOT NULL,
+        PasswordHash NVARCHAR(400) NOT NULL,
         FullName     NVARCHAR(100) NOT NULL,
         Email        NVARCHAR(100) NOT NULL UNIQUE,
         Role         NVARCHAR(20)  NOT NULL,   -- 'SV','GV','Admin'
         IsActive     BIT           NOT NULL DEFAULT 1
         -- TODO: sau này thêm FailedLoginCount, LockedUntil...
     );
+END
+GO
+
+-- Widen PasswordHash for existing DB (optional)
+IF COL_LENGTH('dbo.Users','PasswordHash') IS NOT NULL
+BEGIN
+    BEGIN TRY
+        ALTER TABLE dbo.Users ALTER COLUMN PasswordHash NVARCHAR(400) NOT NULL;
+    END TRY
+    BEGIN CATCH
+        -- ignore if not possible
+    END CATCH
 END
 GO
 
@@ -170,12 +182,12 @@ BEGIN
         SubmissionId INT NOT NULL,
         Score        DECIMAL(5,2) NOT NULL,
         Comment      NVARCHAR(MAX),
-        GradedBy     INT NULL,   -- TeacherId
+        GradedBy     INT NULL,   -- UserId
         GradedTime   DATETIME NOT NULL DEFAULT GETDATE(),
         CONSTRAINT FK_Grades_Submissions 
             FOREIGN KEY (SubmissionId) REFERENCES Submissions(SubmissionId),
         CONSTRAINT FK_Grades_Teachers 
-            FOREIGN KEY (GradedBy) REFERENCES Teachers(TeacherId)
+            FOREIGN KEY (GradedBy) REFERENCES Users(UserId)
     );
 END
 GO
@@ -221,7 +233,7 @@ BEGIN
     CREATE TABLE dbo.RegistrationRequests (
         RequestId      INT IDENTITY(1,1) PRIMARY KEY,
         Username       NVARCHAR(50)  NOT NULL,
-        PasswordHash   NVARCHAR(255) NOT NULL,
+        PasswordHash   NVARCHAR(400) NOT NULL,
         FullName       NVARCHAR(100) NOT NULL,
         Email          NVARCHAR(100) NOT NULL,
         Role           NVARCHAR(20)  NOT NULL, -- 'SV', 'GV', 'Admin'
@@ -232,8 +244,35 @@ BEGIN
 END;
 GO
 
-USE ElearningDB;
+-- Widen RegistrationRequests.PasswordHash for existing DB (optional)
+IF COL_LENGTH('dbo.RegistrationRequests','PasswordHash') IS NOT NULL
+BEGIN
+    BEGIN TRY
+        ALTER TABLE dbo.RegistrationRequests ALTER COLUMN PasswordHash NVARCHAR(400) NOT NULL;
+    END TRY
+    BEGIN CATCH
+        -- ignore if not possible
+    END CATCH
+END
 GO
+
+-- ===== OTP hardening (RegistrationRequests) =====
+IF COL_LENGTH('dbo.RegistrationRequests','OTPHash') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPHash VARBINARY(32) NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPExpiresAt') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPExpiresAt DATETIME NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPAttemptCount') IS NULL
+BEGIN
+    ALTER TABLE dbo.RegistrationRequests ADD OTPAttemptCount INT NOT NULL CONSTRAINT DF_RegistrationRequests_OTPAttemptCount DEFAULT 0;
+END
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPUsedAt') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPUsedAt DATETIME NULL;
+GO
+
+
 
 --------------------------------------------------------
 -- 1) BẢNG KHOA
@@ -357,12 +396,20 @@ IF NOT EXISTS (SELECT 1 FROM AcademicTitles WHERE TitleName = N'Tiến sĩ')
 GO
 
 
-ALTER TABLE RegistrationRequests
-ADD ClassName     NVARCHAR(50)   NULL,
-    Faculty       NVARCHAR(100)  NULL,
-    Department    NVARCHAR(100)  NULL,
-    AcademicTitle NVARCHAR(50)   NULL;
 
+-- ===== Thông tin bổ sung của RegistrationRequests (nếu chưa có) =====
+IF COL_LENGTH('dbo.RegistrationRequests','ClassName') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD ClassName NVARCHAR(50) NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','Faculty') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD Faculty NVARCHAR(100) NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','Department') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD Department NVARCHAR(100) NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','AcademicTitle') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD AcademicTitle NVARCHAR(50) NULL;
+GO
 
 --------------------------------------------------------
 -- (TÙY CHỌN) THÊM 1 SV DEMO ĐỂ TEST SAU NÀY
@@ -371,7 +418,7 @@ ADD ClassName     NVARCHAR(50)   NULL,
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'sv01')
 BEGIN
     INSERT INTO Users (Username, PasswordHash, FullName, Email, Role)
-    VALUES (N'sv01', N'123456', N'Nguyễn Văn A', N'sv01@example.com', N'SV');
+    VALUES (N'sv01', N'PBKDF2$V1$150000$VKRIxvzoErymd3NHCDMqOw==$WvrCHRSCjtEGBsIBHH9MI/nQwSKExqqRi1YoOpcJVc0=', N'Nguyễn Văn A', N'deathringls680@gmail.com', N'SV');
 
     DECLARE @uid INT = SCOPE_IDENTITY();
 
@@ -387,7 +434,7 @@ GO
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'admin')
 BEGIN
     INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
-    VALUES (N'admin', N'123456', N'Quản trị viên hệ thống', N'admin@example.com', N'Admin', 1);
+    VALUES (N'admin', N'PBKDF2$V1$150000$A15vl6MPfuwk0dtjdGWPKw==$VcwExdiPVi07Hc84tPg8tg2P96f+leSlZegMseV1CU8=', N'Quản trị viên hệ thống', N'tuancoi0165@gmail.com', N'Admin', 1);
 
     DECLARE @uid_admin INT = SCOPE_IDENTITY();
 
@@ -402,7 +449,7 @@ GO
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'gv01')
 BEGIN
     INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
-    VALUES (N'gv01', N'123456', N'Nguyễn Thị B', N'gv01@example.com', N'GV', 1);
+    VALUES (N'gv01', N'PBKDF2$V1$150000$oSi7DlqnPZ5IWzzRAKxLlQ==$I0j1NW+RqRj0oKtmqNnD8VHuI/s/e4xpYnHeQruDm0c=', N'Nguyễn Thị B', N'gv01@example.com', N'GV', 1);
 
     DECLARE @uid_gv01 INT = SCOPE_IDENTITY();
 
@@ -411,8 +458,7 @@ BEGIN
 END
 GO
 
-USE ElearningDB;
-GO
+
 
 -- Thêm cột MajorId nếu chưa có
 IF COL_LENGTH('dbo.Courses', 'MajorId') IS NULL
@@ -434,8 +480,7 @@ GO
 
 
 
-USE ElearningDB;
-GO
+
 
 DECLARE @MajorCNTT INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ thông tin');
 DECLARE @MajorDien INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ kỹ thuật điện, điện tử');
@@ -444,8 +489,6 @@ DECLARE @MajorTĐH  INT  = (SELECT MajorId FROM Majors WHERE MajorName = N'Công
 
 
 
-USE ElearningDB;
-GO
 
 INSERT INTO Courses (CourseCode, CourseName, Description, Credit, Status, MajorId)
 VALUES
@@ -520,8 +563,567 @@ VALUES
  3, N'Active',
  (SELECT MajorId FROM Majors WHERE MajorName = N'Công nghệ Kỹ thuật Điều khiển và Tự động hóa'));
 
+ --------------------------------------------------------
+-- DỮ LIỆU MẪU CHO UC-04 – NỘP BÀI & CHẤM ĐIỂM
+--------------------------------------------------------
 
 
+DECLARE @uid_sv01   INT  = (SELECT UserId   FROM Users   WHERE Username = N'sv01');
+DECLARE @uid_gv01   INT  = (SELECT UserId   FROM Users   WHERE Username = N'gv01');
+DECLARE @student_sv INT  = (SELECT StudentId FROM Students WHERE UserId = @uid_sv01);
+DECLARE @teacher_gv INT  = (SELECT TeacherId FROM Teachers WHERE UserId = @uid_gv01);
+
+-- Chọn 1 môn để demo UC-04, ví dụ IT202 - Mạng máy tính
+DECLARE @course_IT202 INT = (SELECT CourseId FROM Courses WHERE CourseCode = N'IT202');
+
+--------------------------------------------------------
+-- 1) TẠO 1 LỚP HỌC PHẦN IT202 DO gv01 PHỤ TRÁCH
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM CourseSections
+    WHERE CourseId = @course_IT202
+      AND Semester = N'2025-2026 HK1'
+      AND [Year]   = 2025
+)
+BEGIN
+    INSERT INTO CourseSections
+        (CourseId,  Semester,          [Year], Room,   MaxEnrollment, CurrentEnrollment, Status,  TeacherId)
+    VALUES
+        (@course_IT202, N'2025-2026 HK1', 2025,  N'A101', 60,            0,                N'Open', @teacher_gv);
+END;
+
+DECLARE @sec_IT202 INT = (
+    SELECT TOP 1 SectionId
+    FROM CourseSections
+    WHERE CourseId = @course_IT202
+      AND Semester = N'2025-2026 HK1'
+      AND [Year]   = 2025
+    ORDER BY SectionId
+);
+
+--------------------------------------------------------
+-- 2) ĐĂNG KÝ sv01 VÀO LỚP HỌC PHẦN NÀY
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Enrollments
+    WHERE StudentId = @student_sv
+      AND SectionId = @sec_IT202
+)
+BEGIN
+    INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+    VALUES (@student_sv, @sec_IT202, GETDATE(), N'Active');
+
+    UPDATE CourseSections
+    SET CurrentEnrollment = CurrentEnrollment + 1
+    WHERE SectionId = @sec_IT202;
+END;
+
+--------------------------------------------------------
+-- 3) TẠO 1 BÀI TẬP CHO LỚP IT202
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Assignments
+    WHERE SectionId = @sec_IT202
+      AND Title     = N'Bài tập 1 - Phân tích gói tin'
+)
+BEGIN
+    INSERT INTO Assignments
+        (SectionId,   Title,                                Description,
+         AttachmentPath,                        Deadline,                    Status)
+    VALUES
+        (@sec_IT202, N'Bài tập 1 - Phân tích gói tin',
+         N'Sử dụng Wireshark để phân tích gói TCP/UDP và viết báo cáo PDF.',
+         N'/assignments/IT202_BT1.pdf',
+         DATEADD(DAY, 7, GETDATE()),       -- deadline sau 7 ngày
+         N'Open');
+END;
+
+DECLARE @ass_BT1 INT = (
+    SELECT TOP 1 AssignmentId
+    FROM Assignments
+    WHERE SectionId = @sec_IT202
+      AND Title     = N'Bài tập 1 - Phân tích gói tin'
+    ORDER BY AssignmentId
+);
+
+--------------------------------------------------------
+-- 4) THÊM 1 BÀI NỘP ĐÚNG HẠN CỦA sv01
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Submissions
+    WHERE AssignmentId = @ass_BT1
+      AND StudentId    = @student_sv
+)
+BEGIN
+    INSERT INTO Submissions
+        (AssignmentId, StudentId,   FilePath,
+         SubmittedTime,                       IsLate)
+    VALUES
+        (@ass_BT1,     @student_sv, N'/submissions/sv01_IT202_BT1_v1.pdf',
+         DATEADD(DAY, 3, GETDATE()),          -- nộp sau 3 ngày, trước deadline
+         0);
+END;
+
+DECLARE @sub_BT1_sv01 INT = (
+    SELECT TOP 1 SubmissionId
+    FROM Submissions
+    WHERE AssignmentId = @ass_BT1
+      AND StudentId    = @student_sv
+    ORDER BY SubmissionId
+);
+
+--------------------------------------------------------
+-- 5) CHẤM ĐIỂM CHO BÀI NỘP TRÊN
+--------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM Grades
+    WHERE SubmissionId = @sub_BT1_sv01
+)
+BEGIN
+    INSERT INTO Grades
+        (SubmissionId,   Score, Comment,                                                 GradedBy)
+    VALUES
+        (@sub_BT1_sv01,  8.50,  N'Bài làm tốt, phân tích rõ, cần bổ sung phần kết luận.', @uid_gv01);
+    -- Nếu GradedBy của bạn FK sang Teachers(TeacherId) thì đổi @uid_gv01 thành @teacher_gv
+END;
+GO
+
+-- Widen RegistrationRequests.PasswordHash for existing DB (optional)
+IF COL_LENGTH('dbo.RegistrationRequests','PasswordHash') IS NOT NULL
+BEGIN
+    BEGIN TRY
+        ALTER TABLE dbo.RegistrationRequests ALTER COLUMN PasswordHash NVARCHAR(400) NOT NULL;
+    END TRY
+    BEGIN CATCH
+        -- ignore if not possible
+    END CATCH
+END
+GO
+
+-- ===== OTP hardening (RegistrationRequests) =====
+IF COL_LENGTH('dbo.RegistrationRequests','OTPHash') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPHash VARBINARY(32) NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPExpiresAt') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPExpiresAt DATETIME NULL;
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPAttemptCount') IS NULL
+BEGIN
+    ALTER TABLE dbo.RegistrationRequests ADD OTPAttemptCount INT NOT NULL CONSTRAINT DF_RegistrationRequests_OTPAttemptCount DEFAULT 0;
+END
+GO
+IF COL_LENGTH('dbo.RegistrationRequests','OTPUsedAt') IS NULL
+    ALTER TABLE dbo.RegistrationRequests ADD OTPUsedAt DATETIME NULL;
+GO
 
 
+--------------------------------------------------------
+-- DỮ LIỆU MẪU BỔ SUNG CHO UC-05 – QUẢN LÝ ĐIỂM & PHẢN HỒI
+--------------------------------------------------------
 
+-- 0) BỔ SUNG THÊM 2 SINH VIÊN DEMO: sv02, sv03
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'sv02')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'sv02', N'123456', N'Lê Thị C', N'sv02@example.com', N'SV', 1);
+
+    DECLARE @uid_sv02_new INT = SCOPE_IDENTITY();
+
+    INSERT INTO Students (UserId, ClassName, Faculty)
+    VALUES (@uid_sv02_new, N'D18QTANM', N'Công nghệ thông tin');
+END;
+
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Username = N'sv03')
+BEGIN
+    INSERT INTO Users (Username, PasswordHash, FullName, Email, Role, IsActive)
+    VALUES (N'sv03', N'123456', N'Phạm Văn D', N'sv03@example.com', N'SV', 1);
+
+    DECLARE @uid_sv03_new INT = SCOPE_IDENTITY();
+
+    INSERT INTO Students (UserId, ClassName, Faculty)
+    VALUES (@uid_sv03_new, N'D18QTANM', N'Công nghệ thông tin');
+END;
+
+--------------------------------------------------------
+-- 1) LẤY LẠI CÁC ID CẦN DÙNG
+--------------------------------------------------------
+DECLARE @uid_sv01 INT = (SELECT UserId FROM Users WHERE Username = N'sv01');
+DECLARE @uid_sv02 INT = (SELECT UserId FROM Users WHERE Username = N'sv02');
+DECLARE @uid_sv03 INT = (SELECT UserId FROM Users WHERE Username = N'sv03');
+DECLARE @uid_gv01 INT = (SELECT UserId FROM Users WHERE Username = N'gv01');
+
+DECLARE @st_sv01 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv01);
+DECLARE @st_sv02 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv02);
+DECLARE @st_sv03 INT = (SELECT StudentId FROM Students WHERE UserId = @uid_sv03);
+
+DECLARE @teacher_gv01 INT = (SELECT TeacherId FROM Teachers WHERE UserId = @uid_gv01);
+
+-- Môn CƠ SỞ DỮ LIỆU đã được tạo ở trên với CourseCode = 'IT201'
+DECLARE @course_IT201 INT = (
+    SELECT CourseId FROM Courses WHERE CourseCode = N'IT201'
+);
+
+IF @course_IT201 IS NULL
+BEGIN
+    PRINT N'[UC05] Không tìm thấy môn IT201. Hãy chắc chắn đã chạy phần INSERT Courses ở trên.';
+END
+ELSE
+BEGIN
+    --------------------------------------------------------
+    -- 2) TẠO 1 LỚP HỌC PHẦN IT201 DO gv01 PHỤ TRÁCH
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM CourseSections
+        WHERE CourseId = @course_IT201
+          AND Semester = N'2025-2026 HK1'
+          AND [Year]   = 2025
+    )
+    BEGIN
+        INSERT INTO CourseSections
+            (CourseId,     Semester,          [Year], Room,   MaxEnrollment, CurrentEnrollment, Status,  TeacherId)
+        VALUES
+            (@course_IT201, N'2025-2026 HK1', 2025,   N'B202', 60,            0,                N'Open', @teacher_gv01);
+    END;
+
+    DECLARE @sec_IT201 INT =
+    (
+        SELECT TOP 1 SectionId
+        FROM CourseSections
+        WHERE CourseId = @course_IT201
+          AND Semester = N'2025-2026 HK1'
+          AND [Year]   = 2025
+        ORDER BY SectionId
+    );
+
+    --------------------------------------------------------
+    -- 3) ĐĂNG KÝ 3 SINH VIÊN VÀO LỚP HỌC PHẦN IT201
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv01 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv01, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv02 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv02, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Enrollments
+        WHERE StudentId = @st_sv03 AND SectionId = @sec_IT201
+    )
+    BEGIN
+        INSERT INTO Enrollments (StudentId, SectionId, EnrollmentDate, Status)
+        VALUES (@st_sv03, @sec_IT201, GETDATE(), N'Active');
+    END;
+
+    -- Cập nhật lại sĩ số hiện tại cho chính xác
+    UPDATE CourseSections
+    SET CurrentEnrollment = (
+        SELECT COUNT(*) FROM Enrollments e WHERE e.SectionId = CourseSections.SectionId
+    )
+    WHERE SectionId = @sec_IT201;
+
+    --------------------------------------------------------
+    -- 4) TẠO 2 BÀI TẬP CHO LỚP IT201
+    --------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 1 - Thiết kế ERD'
+    )
+    BEGIN
+        INSERT INTO Assignments
+            (SectionId,  Title,Description,AttachmentPath,Deadline, Status)
+        VALUES
+            (@sec_IT201, N'Bài tập 1 - Thiết kế ERD',
+             N'Vẽ sơ đồ ER cho hệ thống quản lý thư viện.',
+             N'/assignments/IT201_BT1_ERD.pdf',
+             DATEADD(DAY, 7, GETDATE()),
+             N'Open');
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 2 - Thiết kế lược đồ quan hệ'
+    )
+    BEGIN
+        INSERT INTO Assignments
+            (SectionId,  Title,                                       Description,
+             AttachmentPath,                        Deadline,                     Status)
+        VALUES
+            (@sec_IT201, N'Bài tập 2 - Thiết kế lược đồ quan hệ',
+             N'Chuyển ERD sang lược đồ quan hệ, chuẩn hóa đến 3NF.',
+             N'/assignments/IT201_BT2_Relation.pdf',
+             DATEADD(DAY, 14, GETDATE()),
+             N'Open');
+    END;
+
+    DECLARE @ass_IT201_BT1 INT =
+    (
+        SELECT TOP 1 AssignmentId
+        FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 1 - Thiết kế ERD'
+        ORDER BY AssignmentId
+    );
+
+    DECLARE @ass_IT201_BT2 INT =
+    (
+        SELECT TOP 1 AssignmentId
+        FROM Assignments
+        WHERE SectionId = @sec_IT201
+          AND Title     = N'Bài tập 2 - Thiết kế lược đồ quan hệ'
+        ORDER BY AssignmentId
+    );
+
+    --------------------------------------------------------
+    -- 5) SUBMISSIONS + ĐIỂM CHO BT1 (ERD)
+    --------------------------------------------------------
+    -- sv01
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv01
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv01,   N'/submissions/sv01_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 3, GETDATE()),          0);
+    END;
+
+    DECLARE @sub_BT1_sv01 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv01
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv01
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                             GradedBy)
+        VALUES
+            (@sub_BT1_sv01, 9.00,  N'Bài làm rất tốt, ERD rõ ràng, đầy đủ thực thể.',   @uid_gv01);
+        -- Nếu FK_Grades_Teachers của bạn trỏ sang Teachers(TeacherId) thì đổi @uid_gv01 thành @teacher_gv01
+    END;
+
+    -- sv02
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv02
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv02,   N'/submissions/sv02_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 6, GETDATE()),          0);
+    END;
+
+    DECLARE @sub_BT1_sv02 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv02
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv02
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                                     GradedBy)
+        VALUES
+            (@sub_BT1_sv02, 7.50, N'Tương đối tốt, thiếu một số thuộc tính khóa ngoại.',       @uid_gv01);
+    END;
+
+    -- sv03 (nộp trễ)
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv03
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT1,  @st_sv03,   N'/submissions/sv03_IT201_BT1_v1.pdf',
+             DATEADD(DAY, 9, GETDATE()),          1); -- nộp sau deadline 7 ngày
+    END;
+
+    DECLARE @sub_BT1_sv03 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT1
+          AND StudentId    = @st_sv03
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT1_sv03
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                                    GradedBy)
+        VALUES
+            (@sub_BT1_sv03, 6.00, N'Bài nộp trễ, ERD còn thiếu mối quan hệ, cần hoàn thiện.', @uid_gv01);
+    END;
+
+    --------------------------------------------------------
+    -- 6) SUBMISSIONS + ĐIỂM CHO BT2 (LƯỢC ĐỒ QUAN HỆ)
+    --------------------------------------------------------
+    -- sv01
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv01
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT2,  @st_sv01,   N'/submissions/sv01_IT201_BT2_v1.pdf',
+             DATEADD(DAY, 10, GETDATE()),         0);
+    END;
+
+    DECLARE @sub_BT2_sv01 INT =
+    (
+        SELECT TOP 1 SubmissionId
+        FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv01
+        ORDER BY SubmissionId
+    );
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Grades WHERE SubmissionId = @sub_BT2_sv01
+    )
+    BEGIN
+        INSERT INTO Grades
+            (SubmissionId,  Score, Comment,                                              GradedBy)
+        VALUES
+            (@sub_BT2_sv01, 8.75, N'Lược đồ quan hệ đúng, chuẩn hóa tốt đến 3NF.',      @uid_gv01);
+    END;
+
+    -- sv02 (chưa chấm điểm, tạo Submission nhưng không tạo Grade để thấy case "chưa có điểm")
+    IF NOT EXISTS (
+        SELECT 1 FROM Submissions
+        WHERE AssignmentId = @ass_IT201_BT2
+          AND StudentId    = @st_sv02
+    )
+    BEGIN
+        INSERT INTO Submissions
+            (AssignmentId,    StudentId,  FilePath,
+             SubmittedTime,                       IsLate)
+        VALUES
+            (@ass_IT201_BT2,  @st_sv02,   N'/submissions/sv02_IT201_BT2_v1.pdf',
+             DATEADD(DAY, 12, GETDATE()),         0);
+    END;
+    -- Cố ý KHÔNG thêm dòng vào Grades để UC-05 có cả trường hợp "đã nộp nhưng chưa chấm"
+
+    -- sv03 (chưa nộp => không có Submission, không có Grade) 
+    -- => UC-05 vẫn chỉ show những bài có Grade (đúng với query hiện tại)
+END;
+GO
+
+
+USE ElearningDBChat;
+GO
+
+IF OBJECT_ID('dbo.GradeReviewRequests', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.GradeReviewRequests (
+        ReviewId         INT IDENTITY(1,1) PRIMARY KEY,
+        GradeId          INT NOT NULL,
+        StudentId        INT NOT NULL,
+        RequesterUserId  INT NOT NULL,
+        Reason           NVARCHAR(500) NOT NULL,
+        Status           NVARCHAR(20)  NOT NULL DEFAULT N'Pending', -- Pending/Approved/Rejected
+        RequestedTime    DATETIME      NOT NULL DEFAULT GETDATE(),
+        Response         NVARCHAR(500) NULL,
+        NewScore         DECIMAL(5,2)  NULL,
+        ReviewedBy       INT NULL,  -- Users.UserId
+        ReviewedTime     DATETIME NULL
+    );
+
+    ALTER TABLE dbo.GradeReviewRequests
+    ADD CONSTRAINT FK_GradeReviewRequests_Grades
+        FOREIGN KEY (GradeId) REFERENCES dbo.Grades(GradeId)
+        ON DELETE CASCADE;
+
+    ALTER TABLE dbo.GradeReviewRequests
+    ADD CONSTRAINT FK_GradeReviewRequests_Students
+        FOREIGN KEY (StudentId) REFERENCES dbo.Students(StudentId);
+
+    ALTER TABLE dbo.GradeReviewRequests
+    ADD CONSTRAINT FK_GradeReviewRequests_RequesterUsers
+        FOREIGN KEY (RequesterUserId) REFERENCES dbo.Users(UserId);
+
+    ALTER TABLE dbo.GradeReviewRequests
+    ADD CONSTRAINT FK_GradeReviewRequests_ReviewedByUsers
+        FOREIGN KEY (ReviewedBy) REFERENCES dbo.Users(UserId);
+END
+GO
+
+
+-- ===== ADD LOCKOUT + AUDIT COLUMNS FOR Users =====
+-- Chạy an toàn nhiều lần (có IF kiểm tra cột tồn tại)
+
+IF COL_LENGTH('dbo.Users', 'FailedLoginCount') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users
+    ADD FailedLoginCount INT NOT NULL
+        CONSTRAINT DF_Users_FailedLoginCount DEFAULT(0);
+END
+
+IF COL_LENGTH('dbo.Users', 'LockedUntil') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users
+    ADD LockedUntil DATETIME NULL;
+END
+
+IF COL_LENGTH('dbo.Users', 'CreatedDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users
+    ADD CreatedDate DATETIME NOT NULL
+        CONSTRAINT DF_Users_CreatedDate DEFAULT(GETDATE());
+END
+
+IF COL_LENGTH('dbo.Users', 'LastLoginDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users
+    ADD LastLoginDate DATETIME NULL;
+END
+
+-- Backfill dữ liệu cũ (nếu có)
+UPDATE dbo.Users
+SET FailedLoginCount = 0
+WHERE FailedLoginCount IS NULL;
+
+UPDATE dbo.Users
+SET CreatedDate = GETDATE()
+WHERE CreatedDate IS NULL;

@@ -2,8 +2,29 @@
 {
     partial class HomeForm
     {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
+        private System.Windows.Forms.Panel panelHeader;
+        private System.Windows.Forms.Panel panelMenu;
+        private System.Windows.Forms.Panel panelContent;
+        private System.Windows.Forms.Label lblAppTitle;
+        private System.Windows.Forms.Label lblUserName;
+        private System.Windows.Forms.Label lblUserCode;
+        private System.Windows.Forms.Label lblRole;
+        private System.Windows.Forms.Button btnLogout;
+        private System.Windows.Forms.Button btnCourses;
+        private System.Windows.Forms.Button btnAssignments;
+        private System.Windows.Forms.Button btnSubmissions;
+        private System.Windows.Forms.Button btnGrades;
+        private System.Windows.Forms.Button btnNotifications;
+        private System.Windows.Forms.Button btnAdmin;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -46,15 +67,15 @@
             this.panelHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelHeader.Location = new System.Drawing.Point(0, 0);
             this.panelHeader.Name = "panelHeader";
-            this.panelHeader.Size = new System.Drawing.Size(884, 60);
+            this.panelHeader.Size = new System.Drawing.Size(1286, 61);
             this.panelHeader.TabIndex = 0;
             // 
             // btnLogout
             // 
             this.btnLogout.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnLogout.Location = new System.Drawing.Point(797, 17);
+            this.btnLogout.Location = new System.Drawing.Point(1203, 17);
             this.btnLogout.Name = "btnLogout";
-            this.btnLogout.Size = new System.Drawing.Size(75, 25);
+            this.btnLogout.Size = new System.Drawing.Size(69, 26);
             this.btnLogout.TabIndex = 4;
             this.btnLogout.Text = "Đăng xuất";
             this.btnLogout.UseVisualStyleBackColor = true;
@@ -64,9 +85,9 @@
             // 
             this.lblRole.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblRole.AutoSize = true;
-            this.lblRole.Location = new System.Drawing.Point(600, 35);
+            this.lblRole.Location = new System.Drawing.Point(889, 35);
             this.lblRole.Name = "lblRole";
-            this.lblRole.Size = new System.Drawing.Size(41, 15);
+            this.lblRole.Size = new System.Drawing.Size(38, 13);
             this.lblRole.TabIndex = 3;
             this.lblRole.Text = "Role: -";
             // 
@@ -74,31 +95,31 @@
             // 
             this.lblUserCode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblUserCode.AutoSize = true;
-            this.lblUserCode.Location = new System.Drawing.Point(600, 20);
+            this.lblUserCode.Location = new System.Drawing.Point(889, 22);
             this.lblUserCode.Name = "lblUserCode";
-            this.lblUserCode.Size = new System.Drawing.Size(60, 15);
+            this.lblUserCode.Size = new System.Drawing.Size(73, 13);
             this.lblUserCode.TabIndex = 2;
-            this.lblUserCode.Text = "Mã: 0000";
+            this.lblUserCode.Text = "Mã: (chưa có)";
             // 
             // lblUserName
             // 
             this.lblUserName.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblUserName.AutoSize = true;
-            this.lblUserName.Location = new System.Drawing.Point(600, 5);
+            this.lblUserName.Location = new System.Drawing.Point(889, 9);
             this.lblUserName.Name = "lblUserName";
-            this.lblUserName.Size = new System.Drawing.Size(98, 15);
+            this.lblUserName.Size = new System.Drawing.Size(98, 13);
             this.lblUserName.TabIndex = 1;
-            this.lblUserName.Text = "Xin chào: (trống)";
+            this.lblUserName.Text = "Người dùng: (trống)";
             // 
             // lblAppTitle
             // 
             this.lblAppTitle.AutoSize = true;
-            this.lblAppTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblAppTitle.Location = new System.Drawing.Point(12, 18);
+            this.lblAppTitle.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.lblAppTitle.Location = new System.Drawing.Point(10, 17);
             this.lblAppTitle.Name = "lblAppTitle";
-            this.lblAppTitle.Size = new System.Drawing.Size(276, 21);
+            this.lblAppTitle.Size = new System.Drawing.Size(227, 30);
             this.lblAppTitle.TabIndex = 0;
-            this.lblAppTitle.Text = "Hệ thống quản lý học tập trực tuyến";
+            this.lblAppTitle.Text = "Hệ thống E-Learning";
             // 
             // panelMenu
             // 
@@ -110,26 +131,26 @@
             this.panelMenu.Controls.Add(this.btnAssignments);
             this.panelMenu.Controls.Add(this.btnCourses);
             this.panelMenu.Dock = System.Windows.Forms.DockStyle.Left;
-            this.panelMenu.Location = new System.Drawing.Point(0, 60);
+            this.panelMenu.Location = new System.Drawing.Point(0, 61);
             this.panelMenu.Name = "panelMenu";
-            this.panelMenu.Size = new System.Drawing.Size(180, 401);
+            this.panelMenu.Size = new System.Drawing.Size(154, 546);
             this.panelMenu.TabIndex = 1;
             // 
             // btnAdmin
             // 
-            this.btnAdmin.Location = new System.Drawing.Point(12, 260);
+            this.btnAdmin.Location = new System.Drawing.Point(10, 225);
             this.btnAdmin.Name = "btnAdmin";
-            this.btnAdmin.Size = new System.Drawing.Size(156, 35);
+            this.btnAdmin.Size = new System.Drawing.Size(134, 30);
             this.btnAdmin.TabIndex = 5;
-            this.btnAdmin.Text = "Quản trị hệ thống";
+            this.btnAdmin.Text = "Quản trị (Admin)";
             this.btnAdmin.UseVisualStyleBackColor = true;
             this.btnAdmin.Click += new System.EventHandler(this.btnAdmin_Click);
             // 
             // btnNotifications
             // 
-            this.btnNotifications.Location = new System.Drawing.Point(12, 210);
+            this.btnNotifications.Location = new System.Drawing.Point(10, 182);
             this.btnNotifications.Name = "btnNotifications";
-            this.btnNotifications.Size = new System.Drawing.Size(156, 35);
+            this.btnNotifications.Size = new System.Drawing.Size(134, 30);
             this.btnNotifications.TabIndex = 4;
             this.btnNotifications.Text = "Thông báo";
             this.btnNotifications.UseVisualStyleBackColor = true;
@@ -137,29 +158,29 @@
             // 
             // btnGrades
             // 
-            this.btnGrades.Location = new System.Drawing.Point(12, 160);
+            this.btnGrades.Location = new System.Drawing.Point(10, 139);
             this.btnGrades.Name = "btnGrades";
-            this.btnGrades.Size = new System.Drawing.Size(156, 35);
+            this.btnGrades.Size = new System.Drawing.Size(134, 30);
             this.btnGrades.TabIndex = 3;
-            this.btnGrades.Text = "Điểm & phản hồi";
+            this.btnGrades.Text = "Điểm";
             this.btnGrades.UseVisualStyleBackColor = true;
             this.btnGrades.Click += new System.EventHandler(this.btnGrades_Click);
             // 
             // btnSubmissions
             // 
-            this.btnSubmissions.Location = new System.Drawing.Point(12, 110);
+            this.btnSubmissions.Location = new System.Drawing.Point(10, 95);
             this.btnSubmissions.Name = "btnSubmissions";
-            this.btnSubmissions.Size = new System.Drawing.Size(156, 35);
+            this.btnSubmissions.Size = new System.Drawing.Size(134, 30);
             this.btnSubmissions.TabIndex = 2;
-            this.btnSubmissions.Text = "Nộp bài / Chấm điểm";
+            this.btnSubmissions.Text = "Bài nộp";
             this.btnSubmissions.UseVisualStyleBackColor = true;
             this.btnSubmissions.Click += new System.EventHandler(this.btnSubmissions_Click);
             // 
             // btnAssignments
             // 
-            this.btnAssignments.Location = new System.Drawing.Point(12, 60);
+            this.btnAssignments.Location = new System.Drawing.Point(10, 52);
             this.btnAssignments.Name = "btnAssignments";
-            this.btnAssignments.Size = new System.Drawing.Size(156, 35);
+            this.btnAssignments.Size = new System.Drawing.Size(134, 30);
             this.btnAssignments.TabIndex = 1;
             this.btnAssignments.Text = "Bài tập";
             this.btnAssignments.UseVisualStyleBackColor = true;
@@ -167,9 +188,9 @@
             // 
             // btnCourses
             // 
-            this.btnCourses.Location = new System.Drawing.Point(12, 10);
+            this.btnCourses.Location = new System.Drawing.Point(10, 9);
             this.btnCourses.Name = "btnCourses";
-            this.btnCourses.Size = new System.Drawing.Size(156, 35);
+            this.btnCourses.Size = new System.Drawing.Size(134, 30);
             this.btnCourses.TabIndex = 0;
             this.btnCourses.Text = "Khóa học";
             this.btnCourses.UseVisualStyleBackColor = true;
@@ -177,23 +198,25 @@
             // 
             // panelContent
             // 
+            this.panelContent.BackColor = System.Drawing.Color.White;
             this.panelContent.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelContent.Location = new System.Drawing.Point(180, 60);
+            this.panelContent.Location = new System.Drawing.Point(154, 61);
             this.panelContent.Name = "panelContent";
-            this.panelContent.Size = new System.Drawing.Size(704, 401);
+            this.panelContent.Size = new System.Drawing.Size(1132, 546);
             this.panelContent.TabIndex = 2;
             // 
             // HomeForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(884, 461);
+            this.ClientSize = new System.Drawing.Size(1286, 607);
             this.Controls.Add(this.panelContent);
             this.Controls.Add(this.panelMenu);
             this.Controls.Add(this.panelHeader);
             this.Name = "HomeForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Elearning - Main Shell";
+            this.Text = " ";
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.HomeForm_FormClosed);
             this.Load += new System.EventHandler(this.HomeForm_Load);
             this.panelHeader.ResumeLayout(false);
             this.panelHeader.PerformLayout();
@@ -203,20 +226,5 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.Panel panelHeader;
-        private System.Windows.Forms.Label lblAppTitle;
-        private System.Windows.Forms.Label lblUserName;
-        private System.Windows.Forms.Label lblUserCode;
-        private System.Windows.Forms.Label lblRole;
-        private System.Windows.Forms.Button btnLogout;
-        private System.Windows.Forms.Panel panelMenu;
-        private System.Windows.Forms.Button btnCourses;
-        private System.Windows.Forms.Button btnAssignments;
-        private System.Windows.Forms.Button btnSubmissions;
-        private System.Windows.Forms.Button btnGrades;
-        private System.Windows.Forms.Button btnNotifications;
-        private System.Windows.Forms.Button btnAdmin;
-        private System.Windows.Forms.Panel panelContent;
     }
 }

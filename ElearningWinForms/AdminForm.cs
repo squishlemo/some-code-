@@ -139,7 +139,7 @@ namespace ElearningWinForms
                 object userIdObj = DbHelper.ExecuteScalar(
                     sqlInsertUser,
                     new SqlParameter("@u", SqlDbType.NVarChar, 50) { Value = username },
-                    new SqlParameter("@p", SqlDbType.NVarChar, 255) { Value = password },
+                    new SqlParameter("@p", SqlDbType.NVarChar, 400) { Value = password },
                     new SqlParameter("@name", SqlDbType.NVarChar, 100) { Value = fullName },
                     new SqlParameter("@em", SqlDbType.NVarChar, 100) { Value = email },
                     new SqlParameter("@role", SqlDbType.NVarChar, 20) { Value = role }

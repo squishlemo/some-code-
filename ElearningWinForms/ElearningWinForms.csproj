@@ -41,6 +41,7 @@
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -58,10 +59,28 @@
     <Compile Include="AssignmentManagementForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="AssignmentManagementForm.Designer.cs">
+      <DependentUpon>AssignmentManagementForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CourseForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CourseForm.Designer.cs">
+      <DependentUpon>CourseForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="CourseManagementForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="CourseManagementForm.Designer.cs">
+      <DependentUpon>CourseManagementForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="DbHelper.cs" />
+    <Compile Include="EnrolledStudentsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Security\PasswordHasher.cs" />
+    <Compile Include="Security\EmailSender.cs" />
+    <Compile Include="Security\OtpHasher.cs" />
     <Compile Include="GradeManagementForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -103,6 +122,21 @@
     <EmbeddedResource Include="AdminForm.resx">
       <DependentUpon>AdminForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="AssignmentManagementForm.resx">
+      <DependentUpon>AssignmentManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CourseForm.resx">
+      <DependentUpon>CourseForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CourseManagementForm.resx">
+      <DependentUpon>CourseManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GradeManagementForm.resx">
+      <DependentUpon>GradeManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HomeForm.resx">
+      <DependentUpon>HomeForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="NotificationForm.resx">
       <DependentUpon>NotificationForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -117,6 +151,9 @@
     </Compile>
     <EmbeddedResource Include="RegisterForm.resx">
       <DependentUpon>RegisterForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SubmissionForm.resx">
+      <DependentUpon>SubmissionForm.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

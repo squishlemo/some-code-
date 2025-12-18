@@ -2,295 +2,32 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Net;
-using System.Net.Mail;
 using System.Windows.Forms;
-using System.Drawing;
 using ElearningWinForms.Data;
+using ElearningWinForms.Security;
 using Microsoft.VisualBasic;
 
 namespace ElearningWinForms
 {
     public partial class RegisterForm : Form
     {
-        // ===== CẤU HÌNH EMAIL HỆ THỐNG (GMAIL + APP PASSWORD) =====
-        private const string SystemEmail = "elearning.demoing@gmail.com";
-        private const string SystemEmailAppPassword = "dkve qxvo pcyc jajy";
-        // ==========================================================
+        // Email hệ thống được đọc từ App.config (SystemEmail/SystemEmailAppPassword)
+        // hoặc env var (ELEARNING_SYSTEM_EMAIL / ELEARNING_SYSTEM_EMAIL_APP_PASSWORD).
 
         // ===== BẢNG DANH MỤC LẤY TỪ DATABASE =====
         private DataTable majorsTable;      // Ngành (kèm khoa)
         private DataTable classesTable;     // Lớp theo ngành
         private DataTable titlesTable;      // Học vị GV
 
-        // ===== CONTROL FIELD =====
-        private Label lblTitle;
-        private Label lblUsername;
-        private Label lblPassword;
-        private Label lblFullName;
-        private Label lblEmail;
-        private Label lblRole;
-        private Label lblMajor;
-        private Label lblClassName;
-        private Label lblFaculty;
-        private Label lblDepartment;
-        private Label lblAcademicTitle;
-
-        private TextBox txtUsername;
-        private TextBox txtPassword;
-        private TextBox txtFullName;
-        private TextBox txtEmail;
-        private TextBox txtFaculty;
-
-        private ComboBox cboRole;
-        private ComboBox cboMajor;          // chọn ngành SV
-        private ComboBox txtClassName;      // combo lớp SV
-        private ComboBox txtDepartment;     // combo ngành dạy GV
-        private ComboBox txtAcademicTitle;  // combo học vị GV
-
-        private Button btnRegister;
-
-        // ==========================================================
-
         public RegisterForm()
         {
-            // Ở file Designer chỉ cần một InitializeComponent() rỗng
             InitializeComponent();
-
-            // Dựng toàn bộ giao diện bằng code
-            BuildUI();
 
             // Gắn event
             this.Load += RegisterForm_Load;
             cboRole.SelectedIndexChanged += cboRole_SelectedIndexChanged;
             cboMajor.SelectedIndexChanged += cboMajor_SelectedIndexChanged;
             btnRegister.Click += btnRegister_Click;
-        }
-
-        // ==========================================================
-        //              KHỞI TẠO GIAO DIỆN BẰNG CODE
-        // ==========================================================
-        private void BuildUI()
-        {
-            this.SuspendLayout();
-
-            // Form
-            this.Text = "Đăng ký tài khoản";
-            this.ClientSize = new Size(420, 520);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-
-            int marginLeftLabel = 20;
-            int marginLeftInput = 140;
-            int inputWidth = 240;
-            int currentTop = 20;
-            int verticalSpacing = 8;
-            int rowHeight = 26;
-
-            // ===== Title =====
-            lblTitle = new Label
-            {
-                Text = "Đăng ký",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-                AutoSize = true
-            };
-            lblTitle.Location =
-                new Point((this.ClientSize.Width - lblTitle.PreferredWidth) / 2, currentTop);
-            this.Controls.Add(lblTitle);
-
-            currentTop += 40;
-
-            // ===== Username =====
-            lblUsername = new Label
-            {
-                Text = "Tài khoản:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtUsername = new TextBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth
-            };
-            this.Controls.Add(lblUsername);
-            this.Controls.Add(txtUsername);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Password =====
-            lblPassword = new Label
-            {
-                Text = "Mật khẩu:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtPassword = new TextBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                UseSystemPasswordChar = true
-            };
-            this.Controls.Add(lblPassword);
-            this.Controls.Add(txtPassword);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== FullName =====
-            lblFullName = new Label
-            {
-                Text = "Họ tên:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtFullName = new TextBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth
-            };
-            this.Controls.Add(lblFullName);
-            this.Controls.Add(txtFullName);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Email =====
-            lblEmail = new Label
-            {
-                Text = "Email:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtEmail = new TextBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth
-            };
-            this.Controls.Add(lblEmail);
-            this.Controls.Add(txtEmail);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Role =====
-            lblRole = new Label
-            {
-                Text = "Vai trò:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            cboRole = new ComboBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cboRole.Items.AddRange(new object[] { "SV", "GV", "Admin" });
-            this.Controls.Add(lblRole);
-            this.Controls.Add(cboRole);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Major (SV) =====
-            lblMajor = new Label
-            {
-                Text = "Ngành:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            cboMajor = new ComboBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            this.Controls.Add(lblMajor);
-            this.Controls.Add(cboMajor);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== ClassName (SV) =====
-            lblClassName = new Label
-            {
-                Text = "Tên lớp:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtClassName = new ComboBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            this.Controls.Add(lblClassName);
-            this.Controls.Add(txtClassName);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Faculty (SV) =====
-            lblFaculty = new Label
-            {
-                Text = "Khoa:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtFaculty = new TextBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                ReadOnly = true
-            };
-            this.Controls.Add(lblFaculty);
-            this.Controls.Add(txtFaculty);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Department (GV) =====
-            lblDepartment = new Label
-            {
-                Text = "Ngành dạy:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtDepartment = new ComboBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            this.Controls.Add(lblDepartment);
-            this.Controls.Add(txtDepartment);
-
-            currentTop += rowHeight + verticalSpacing;
-
-            // ===== Academic Title (GV) =====
-            lblAcademicTitle = new Label
-            {
-                Text = "Học vị:",
-                AutoSize = true,
-                Location = new Point(marginLeftLabel, currentTop)
-            };
-            txtAcademicTitle = new ComboBox
-            {
-                Location = new Point(marginLeftInput, currentTop - 3),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            this.Controls.Add(lblAcademicTitle);
-            this.Controls.Add(txtAcademicTitle);
-
-            currentTop += rowHeight + 2 * verticalSpacing;
-
-            // ===== Button Register =====
-            btnRegister = new Button
-            {
-                Text = "Tạo tài khoản",
-                Width = 160,
-                Height = 32,
-                Location = new Point((this.ClientSize.Width - 160) / 2, currentTop)
-            };
-            this.Controls.Add(btnRegister);
-
-            this.AcceptButton = btnRegister;
-
-            this.ResumeLayout(false);
         }
 
         // ==========================================================
@@ -350,7 +87,7 @@ namespace ElearningWinForms
                 txtAcademicTitle.ValueMember = "TitleId";
                 txtAcademicTitle.SelectedIndex = -1;
 
-                // Lớp sẽ load theo ngành, nên chưa gán DataSource ở đây
+                // Lớp sẽ load theo ngành
                 txtClassName.DataSource = null;
             }
             catch (Exception ex)
@@ -379,7 +116,6 @@ namespace ElearningWinForms
                 return;
             }
 
-            // Lấy dòng đang chọn
             var rowView = cboMajor.SelectedItem as DataRowView;
             if (rowView == null)
             {
@@ -397,7 +133,7 @@ namespace ElearningWinForms
             else
                 txtFaculty.Text = string.Empty;
 
-            // load lớp theo ngành (phần dưới giữ nguyên)
+            // load lớp theo ngành
             try
             {
                 string sqlClasses = @"
@@ -423,7 +159,6 @@ namespace ElearningWinForms
                                 MessageBoxIcon.Error);
             }
         }
-
 
         /// <summary>
         /// Hiện/ẩn các ô nhập theo Role: SV/GV/Admin
@@ -571,28 +306,38 @@ namespace ElearningWinForms
                     return;
                 }
 
-                // 3) Sinh OTP 6 chữ số
-                var rnd = new Random();
-                string otp = rnd.Next(0, 1000000).ToString("D6");
+                // 3) Hash mật khẩu (PBKDF2)
+                string passwordHash = PasswordHasher.HashPassword(password);
 
-                // 4) Lưu yêu cầu vào RegistrationRequests
+                // 4) Sinh OTP (crypto RNG) + hash OTP (HMAC-SHA256 + pepper)
+                const int otpExpiryMinutes = 1;   // đổi tùy ý (1, 3, 5...)
+                const int otpMaxAttempts = 5;
+
+                string otp = OtpHasher.GenerateNumericOtp(6);
+                byte[] otpHash = OtpHasher.ComputeOtpHash(username, otp);
+                DateTime otpExpiresAt = DateTime.Now.AddMinutes(otpExpiryMinutes);
+
+                // 5) Lưu yêu cầu vào RegistrationRequests (KHÔNG lưu OTP dạng rõ)
                 string sqlInsert = @"
                     INSERT INTO RegistrationRequests
-                        (Username, PasswordHash, FullName, Email, Role, Status, OTP,
+                        (Username, PasswordHash, FullName, Email, Role, Status,
+                         OTP, OTPHash, OTPExpiresAt, OTPAttemptCount, OTPUsedAt,
                          ClassName, Faculty, Department, AcademicTitle)
                     VALUES
-                        (@u, @p, @name, @em, @role, N'PendingEmail', @otp,
+                        (@u, @p, @name, @em, @role, N'PendingEmail',
+                         NULL, @otpHash, @otpExp, 0, NULL,
                          @class, @faculty, @dept, @title);
                     SELECT SCOPE_IDENTITY();";
 
                 object insertedId = DbHelper.ExecuteScalar(
                     sqlInsert,
                     new SqlParameter("@u", SqlDbType.NVarChar, 50) { Value = username },
-                    new SqlParameter("@p", SqlDbType.NVarChar, 255) { Value = password }, // demo: chưa hash
+                    new SqlParameter("@p", SqlDbType.NVarChar, 400) { Value = passwordHash },
                     new SqlParameter("@name", SqlDbType.NVarChar, 100) { Value = fullName },
                     new SqlParameter("@em", SqlDbType.NVarChar, 100) { Value = email },
                     new SqlParameter("@role", SqlDbType.NVarChar, 20) { Value = role },
-                    new SqlParameter("@otp", SqlDbType.NVarChar, 10) { Value = otp },
+                    new SqlParameter("@otpHash", SqlDbType.VarBinary, 32) { Value = otpHash },
+                    new SqlParameter("@otpExp", SqlDbType.DateTime) { Value = otpExpiresAt },
                     new SqlParameter("@class", SqlDbType.NVarChar, 100)
                     { Value = (object)className ?? DBNull.Value },
                     new SqlParameter("@faculty", SqlDbType.NVarChar, 100)
@@ -605,9 +350,10 @@ namespace ElearningWinForms
 
                 int requestId = Convert.ToInt32(insertedId);
 
-                // 5) Gửi email OTP
-                if (!SendOtpEmail(email, otp))
+                // 6) Gửi email OTP
+                if (!SendOtpEmail(email, otp, otpExpiryMinutes))
                 {
+                    RejectRegistrationRequest(requestId, "Không gửi được OTP (email lỗi)");
                     MessageBox.Show("Không gửi được OTP. Vui lòng thử lại sau.",
                                     "Lỗi gửi OTP",
                                     MessageBoxButtons.OK,
@@ -615,64 +361,139 @@ namespace ElearningWinForms
                     return;
                 }
 
-                // 6) Nhập OTP
-                string inputOtp = Interaction.InputBox(
-                    "Mã OTP đã được gửi tới email của bạn.\nVui lòng nhập mã OTP để xác thực.",
-                    "Xác thực OTP",
-                    ""
-                );
+                // 7) Nhập OTP (tối đa otpMaxAttempts lần)
+                bool verified = false;
 
-                if (string.IsNullOrWhiteSpace(inputOtp))
+                for (int attempt = 1; attempt <= otpMaxAttempts; attempt++)
                 {
-                    MessageBox.Show("Bạn chưa nhập OTP. Yêu cầu đăng ký tạm dừng.",
-                                    "OTP thiếu",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
-                    return;
-                }
+                    // Tải trạng thái OTP hiện tại từ DB (để check hết hạn / số lần thử)
+                    string sqlState = @"
+                        SELECT OTPHash, OTPExpiresAt, OTPAttemptCount, OTPUsedAt
+                        FROM RegistrationRequests
+                        WHERE RequestId = @id AND Status = N'PendingEmail'";
 
-                inputOtp = inputOtp.Trim();
+                    DataTable stateTable = DbHelper.GetDataTable(
+                        sqlState,
+                        new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
+                    );
 
-                // 7) Kiểm tra OTP trong DB
-                string sqlGetOtp = @"
-                    SELECT OTP
-                    FROM RegistrationRequests
-                    WHERE RequestId = @id AND Status = N'PendingEmail'";
-                object otpDbObj = DbHelper.ExecuteScalar(
-                    sqlGetOtp,
-                    new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
-                );
+                    if (stateTable.Rows.Count == 0)
+                    {
+                        MessageBox.Show("Không tìm thấy yêu cầu đăng ký (có thể đã được xử lý).",
+                                        "Lỗi OTP",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Error);
+                        return;
+                    }
 
-                if (otpDbObj == null || otpDbObj == DBNull.Value)
-                {
-                    MessageBox.Show("Không tìm thấy yêu cầu đăng ký, vui lòng thử lại.",
-                                    "Lỗi OTP",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error);
-                    return;
-                }
+                    DataRow state = stateTable.Rows[0];
 
-                string otpDb = otpDbObj.ToString().Trim();
+                    if (state["OTPUsedAt"] != DBNull.Value)
+                    {
+                        MessageBox.Show("OTP đã được sử dụng. Vui lòng đăng ký lại để nhận OTP mới.",
+                                        "OTP đã dùng",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Warning);
+                        return;
+                    }
 
-                if (!string.Equals(inputOtp, otpDb, StringComparison.Ordinal))
-                {
-                    MessageBox.Show("Mã OTP không chính xác.",
+                    if (state["OTPExpiresAt"] == DBNull.Value || DateTime.Now > Convert.ToDateTime(state["OTPExpiresAt"]))
+                    {
+                        RejectRegistrationRequest(requestId, "OTP hết hạn");
+                        MessageBox.Show("OTP đã hết hạn. Vui lòng đăng ký lại để nhận OTP mới.",
+                                        "OTP hết hạn",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    int attemptCount = state["OTPAttemptCount"] == DBNull.Value ? 0 : Convert.ToInt32(state["OTPAttemptCount"]);
+                    int remain = Math.Max(0, otpMaxAttempts - attemptCount);
+
+                    string inputOtp = Interaction.InputBox(
+                        $"Mã OTP đã được gửi tới email của bạn.\n\nNhập OTP (6 số) để xác thực.\nOTP hết hạn sau {otpExpiryMinutes} phút.\nCòn {remain} lần thử.",
+                        "Xác thực OTP",
+                        ""
+                    )?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(inputOtp))
+                    {
+                        RejectRegistrationRequest(requestId, "Người dùng hủy OTP");
+                        MessageBox.Show("Bạn đã hủy/không nhập OTP. Vui lòng đăng ký lại khi sẵn sàng.",
+                                        "Hủy OTP",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    if (state["OTPHash"] == DBNull.Value)
+                    {
+                        RejectRegistrationRequest(requestId, "OTPHash null");
+                        MessageBox.Show("Dữ liệu OTP không hợp lệ. Vui lòng đăng ký lại.",
+                                        "Lỗi OTP",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    byte[] otpHashDb = (byte[])state["OTPHash"];
+                    byte[] inputHash = OtpHasher.ComputeOtpHash(username, inputOtp);
+
+                    if (OtpHasher.FixedTimeEquals(inputHash, otpHashDb))
+                    {
+                        verified = true;
+                        break;
+                    }
+
+                    // Sai OTP -> tăng số lần thử
+                    int newCount = attemptCount + 1;
+
+                    if (newCount >= otpMaxAttempts)
+                    {
+                        RejectRegistrationRequest(requestId, "Sai OTP quá số lần");
+                        MessageBox.Show("Bạn đã nhập sai OTP quá số lần cho phép. Vui lòng đăng ký lại để nhận OTP mới.",
+                                        "Khóa OTP",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    string sqlInc = @"
+                        UPDATE RegistrationRequests
+                        SET OTPAttemptCount = @c
+                        WHERE RequestId = @id AND Status = N'PendingEmail'";
+
+                    DbHelper.ExecuteNonQuery(
+                        sqlInc,
+                        new SqlParameter("@c", SqlDbType.Int) { Value = newCount },
+                        new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
+                    );
+
+                    MessageBox.Show($"Mã OTP không chính xác. Còn {otpMaxAttempts - newCount} lần thử.",
                                     "Sai OTP",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
+                }
+
+                if (!verified)
+                {
+                    RejectRegistrationRequest(requestId, "Không xác thực được OTP");
                     return;
                 }
 
-                // 8) Cập nhật trạng thái sang PendingAdmin
+                // 8) Cập nhật trạng thái sang PendingAdmin + đánh dấu OTP đã dùng
                 string sqlUpdateStatus = @"
                     UPDATE RegistrationRequests
-                    SET Status = N'PendingAdmin'
+                    SET Status = N'PendingAdmin',
+                        OTPUsedAt = GETDATE(),
+                        OTPHash = NULL,
+                        OTPExpiresAt = NULL
                     WHERE RequestId = @id";
+
                 DbHelper.ExecuteNonQuery(
                     sqlUpdateStatus,
                     new SqlParameter("@id", SqlDbType.Int) { Value = requestId }
                 );
-
                 MessageBox.Show(
                     "Xác thực email thành công!\nYêu cầu đăng ký của bạn đang chờ Admin duyệt.",
                     "Thành công",
@@ -692,20 +513,36 @@ namespace ElearningWinForms
             }
         }
 
-        /// <summary>
-        /// Gửi email OTP (dùng Gmail + app password)
-        /// </summary>
-        private bool SendOtpEmail(string toEmail, string otp)
+        private void RejectRegistrationRequest(int requestId, string reason)
         {
             try
             {
-                string fromEmail = SystemEmail;
-                string fromPass = SystemEmailAppPassword;
+                string sql = @"
+                    UPDATE RegistrationRequests
+                    SET Status = N'Rejected',
+                        OTPHash = NULL,
+                        OTPExpiresAt = NULL
+                    WHERE RequestId = @id";
 
-                var message = new MailMessage();
-                message.From = new MailAddress(fromEmail, "Elearning System");
-                message.To.Add(toEmail);
-                message.Subject = "Mã OTP xác thực đăng ký Elearning";
+                DbHelper.ExecuteNonQuery(
+                    sql,
+                    new System.Data.SqlClient.SqlParameter("@id", System.Data.SqlDbType.Int) { Value = requestId }
+                );
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        /// <summary>
+        /// Gửi email OTP (dùng Gmail + app password)
+        /// </summary>
+        private bool SendOtpEmail(string toEmail, string otp, int expiryMinutes)
+        {
+            try
+            {
+                string subject = "Mã OTP xác thực đăng ký Elearning";
 
                 string html = @"
 <!DOCTYPE html>
@@ -750,22 +587,14 @@ namespace ElearningWinForms
     <div class='code'>" + otp + @"</div>
     <p>Vui lòng nhập mã này vào màn hình đăng ký để hoàn tất bước xác thực email.</p>
     <p class='note'>
-        Mã OTP có hiệu lực trong một thời gian ngắn.
+        Mã OTP có hiệu lực trong " + expiryMinutes + @" phút.
         Nếu bạn không yêu cầu đăng ký, hãy bỏ qua email này.
     </p>
   </div>
 </body>
 </html>";
 
-                message.Body = html;
-                message.IsBodyHtml = true;
-
-                var client = new SmtpClient("smtp.gmail.com", 587);
-                client.EnableSsl = true;
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(fromEmail, fromPass);
-
-                client.Send(message);
+                EmailSender.SendHtmlEmail(toEmail, subject, html);
                 return true;
             }
             catch (Exception ex)
